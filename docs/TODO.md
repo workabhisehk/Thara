@@ -12,10 +12,14 @@
   - Send `/newbot` and follow instructions
   - Save the bot token
   
-- [ ] **1.2** Get Gemini API Key
-  - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+- [ ] **1.2** Get OpenAI API Key
+  - Go to [OpenAI Platform](https://platform.openai.com/api-keys)
+  - Sign up or log in
   - Create API key
-  - Save the key
+  - Save the key (you won't be able to see it again!)
+  - Note: Free tier has $5 credit, then pay-as-you-go
+  - Optional: Get Gemini API Key for fallback (if OpenAI fails)
+    - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
   
 - [ ] **1.3** Set up Google Cloud Project (for Calendar API)
   - Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -234,7 +238,7 @@ If you encounter issues, check:
 2. **Telegram bot not responding** → Check TELEGRAM_BOT_TOKEN
 3. **Calendar OAuth fails** → Verify redirect URI matches exactly
 4. **Scheduler not working** → Check timezone settings
-5. **AI errors** → Verify GEMINI_API_KEY is valid
+5. **AI errors** → Verify OPENAI_API_KEY is valid
 
 ---
 

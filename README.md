@@ -15,7 +15,7 @@ A context-aware conversational AI assistant that helps you manage tasks, schedul
 ## Architecture
 
 - **Backend**: Python 3.11+ with FastAPI
-- **AI Framework**: LangChain with Gemini API (OpenAI fallback)
+- **AI Framework**: LangChain with OpenAI API (Gemini fallback)
 - **Memory System**: LlamaIndex + Supabase PostgreSQL with pgvector
 - **Telegram Bot**: python-telegram-bot
 - **Calendar**: Google Calendar API v3
@@ -76,7 +76,8 @@ A context-aware conversational AI assistant that helps you manage tasks, schedul
 See `.env.example` for all required environment variables:
 
 - `TELEGRAM_BOT_TOKEN`: Get from [@BotFather](https://t.me/botfather)
-- `GEMINI_API_KEY`: Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
+- `OPENAI_API_KEY`: Get from [OpenAI Platform](https://platform.openai.com/api-keys) (required)
+- `GEMINI_API_KEY`: Get from [Google AI Studio](https://makersuite.google.com/app/apikey) (optional, for fallback)
 - `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: Create OAuth2 credentials in Google Cloud Console
 - `DATABASE_URL`: PostgreSQL connection string
 

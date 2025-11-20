@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize embedding model
 embed_model = OpenAIEmbedding(
-    api_key=settings.openai_api_key or "",
+    api_key=settings.openai_api_key,  # OpenAI is now required
     model="text-embedding-3-small"
 )
 

@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     telegram_bot_token: str = Field(..., env="TELEGRAM_BOT_TOKEN")
     
     # AI/LLM
-    gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
-    openai_api_key: Optional[str] = Field(None, env="OPENAI_API_KEY")
+    openai_api_key: str = Field(..., env="OPENAI_API_KEY")
+    gemini_api_key: Optional[str] = Field(None, env="GEMINI_API_KEY")
     
     # Database
     database_url: str = Field(..., env="DATABASE_URL")
