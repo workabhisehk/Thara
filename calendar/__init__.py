@@ -1,0 +1,2 @@
+"""Calendar integration package initialization."""
+

@@ -1,0 +1,2 @@
+"""Edge cases package."""
+
