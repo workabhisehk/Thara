@@ -127,6 +127,15 @@ alembic revision --autogenerate -m "description"
 alembic upgrade head
 ```
 
+## Documentation
+
+Comprehensive documentation is available in the `docs/` folder:
+
+- **[TODO.md](docs/TODO.md)** - Prioritized task list with dependencies
+- **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Complete deployment guide for all platforms
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
+- **[IMPROVEMENTS.md](docs/IMPROVEMENTS.md)** - Future enhancements and improvements
+
 ## License
 
 MIT
