@@ -12,7 +12,7 @@
   - Send `/newbot` and follow instructions
   - Save the bot token
   
-- [ ] **1.2** Get OpenAI API Key
+- [x] **1.2** Get OpenAI API Key ✅
   - Go to [OpenAI Platform](https://platform.openai.com/api-keys)
   - Sign up or log in
   - Create API key
@@ -20,6 +20,7 @@
   - Note: Free tier has $5 credit, then pay-as-you-go
   - Optional: Get Gemini API Key for fallback (if OpenAI fails)
     - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+- [x] **1.2b** Get Gemini API Key (optional fallback) ✅
   
 - [ ] **1.3** Set up Google Cloud Project (for Calendar API)
   - Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -245,12 +246,15 @@ If you encounter issues, check:
 ## 📊 Progress Tracking
 
 **Current Phase**: Phase 1 - Environment Setup  
-**Completed**: ✅ 1.1 - Telegram Bot Token  
+**Completed**: 
+- ✅ 1.1 - Telegram Bot Token
+- ✅ 1.2 - OpenAI API Key
+- ✅ 1.2b - Gemini API Key (optional)
+
 **Next Steps**: 
-1. Get Gemini API Key (1.2)
-2. Set up Google Cloud Project (1.3)
-3. Set up Database (1.4)
-4. Create .env file (1.5)
+1. Set up Google Cloud Project (1.3) - for Calendar API
+2. Set up Database (1.4) - Supabase or Railway
+3. Create .env file (1.5) - add all your keys
 
 **Next Milestone**: Complete Phase 1 and move to Phase 2  
 **Estimated Time to MVP**: 3-4 hours  
