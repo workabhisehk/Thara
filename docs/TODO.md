@@ -32,10 +32,24 @@
   - Download credentials JSON (optional, we'll use env vars)
   
   **Detailed Step 4 - OAuth Consent Screen:**
-  1. In Google Cloud Console, go to: **APIs & Services** → **OAuth consent screen** (left sidebar)
-  2. You'll see a form. Fill it out:
-     - **User Type**: Select "External" (unless you have Google Workspace, then use "Internal")
-     - Click "Create"
+  1. In Google Cloud Console:
+     - Look at the left sidebar menu (hamburger menu ☰ if not visible)
+     - Click **"APIs & Services"**
+     - In the submenu, click **"OAuth consent screen"**
+  2. **First Time Setup** - You'll see one of these:
+     
+     **Option A: If you see a page asking "What user type do you want to support?"**
+     - You'll see two cards/buttons: "External" and "Internal"
+     - Click on **"External"** (unless you have Google Workspace)
+     - Click **"CREATE"** button at the bottom
+     
+     **Option B: If you see a form with fields like "App name", "User support email"**
+     - You're already past the user type selection
+     - Skip to step 3 below
+     
+     **Option C: If you see "OAuth consent screen" with tabs (App information, Scopes, etc.)**
+     - The consent screen is already configured
+     - You can skip to Step 5 (Create OAuth credentials)
   3. **App Information** page:
      - **App name**: "Thara Productivity Agent" (or any name you like)
      - **User support email**: Your email address
