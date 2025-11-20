@@ -118,20 +118,29 @@
 #### For You:
 - [ ] **2.1** Install Python dependencies
   ```bash
+  # Create virtual environment (if not done)
+  python3 -m venv venv
+  source venv/bin/activate  # Mac/Linux
+  # OR venv\Scripts\activate  # Windows
+  
+  # Install dependencies
   pip install -r requirements.txt
   ```
 
-- [ ] **2.2** Run database migrations
+- [ ] **2.2** Create initial database migration
+  ```bash
+  # Make sure you're in the project directory and venv is activated
+  alembic revision --autogenerate -m "Initial schema"
+  ```
+  This creates the migration file based on your database models.
+
+- [ ] **2.3** Run database migrations
   ```bash
   alembic upgrade head
   ```
-  If this fails, we may need to create initial migration first.
+  This creates all the tables in your database.
 
 #### For Me:
-- [ ] **2.3** Create initial Alembic migration
-  ```bash
-  alembic revision --autogenerate -m "Initial schema"
-  ```
 - [ ] **2.4** Verify all models are included in migration
 - [ ] **2.5** Test database connection
 
