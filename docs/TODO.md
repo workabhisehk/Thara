@@ -30,12 +30,12 @@
   - Set redirect URI: `http://localhost:8000/auth/callback` (for local) or your deployment URL
   - Download credentials JSON (optional, we'll use env vars)
   
-- [ ] **1.4** Set up Database (Choose one):
+- [x] **1.4** Set up Database ✅
   - **Option A: Supabase (Recommended - Free tier)**
     - Go to [supabase.com](https://supabase.com)
     - Create account and new project
     - Get connection string from Settings > Database
-    - Enable pgvector extension: Go to SQL Editor, run: `CREATE EXTENSION IF NOT EXISTS vector;`
+    - ⚠️ **IMPORTANT**: Enable pgvector extension: Go to SQL Editor, run: `CREATE EXTENSION IF NOT EXISTS vector;`
   - **Option B: Railway PostgreSQL**
     - Go to [railway.app](https://railway.app)
     - Create account
@@ -250,10 +250,11 @@ If you encounter issues, check:
 - ✅ 1.1 - Telegram Bot Token
 - ✅ 1.2 - OpenAI API Key
 - ✅ 1.2b - Gemini API Key (optional)
+- ✅ 1.4 - Database (Supabase) - **Don't forget pgvector extension!**
 
 **Next Steps**: 
-1. Set up Google Cloud Project (1.3) - for Calendar API
-2. Set up Database (1.4) - Supabase or Railway
+1. ⚠️ Enable pgvector in Supabase (if not done yet)
+2. Set up Google Cloud Project (1.3) - for Calendar API
 3. Create .env file (1.5) - add all your keys
 
 **Next Milestone**: Complete Phase 1 and move to Phase 2  
