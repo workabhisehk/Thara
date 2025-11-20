@@ -22,7 +22,7 @@
     - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
 - [x] **1.2b** Get Gemini API Key (optional fallback) ✅
   
-- [ ] **1.3** Set up Google Cloud Project (for Calendar API)
+- [x] **1.3** Set up Google Cloud Project (for Calendar API) ✅
   - Go to [Google Cloud Console](https://console.cloud.google.com/)
   - Create new project or select existing
   - Enable Google Calendar API
@@ -299,10 +299,11 @@ If you encounter issues, check:
 - ✅ 1.1 - Telegram Bot Token
 - ✅ 1.2 - OpenAI API Key
 - ✅ 1.2b - Gemini API Key (optional)
+- ✅ 1.3 - Google Cloud Project + OAuth Consent Screen
 - ✅ 1.4 - Database (Supabase) + pgvector extension enabled
 
 **Next Steps**: 
-1. Set up Google Cloud Project (1.3) - for Calendar API
+1. Create OAuth 2.0 Credentials (Step 5 in 1.3) - Get Client ID and Secret
 2. Create .env file (1.5) - add all your keys
 
 **Next Milestone**: Complete Phase 1 and move to Phase 2  
