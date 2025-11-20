@@ -47,9 +47,16 @@
      - You're already past the user type selection
      - Skip to step 3 below
      
-     **Option C: If you see "OAuth consent screen" with tabs (App information, Scopes, etc.)**
+     **Option C: If you see "OAuth consent screen" with tabs (App information, Scopes, Audience, etc.)**
      - The consent screen is already configured
-     - You can skip to Step 5 (Create OAuth credentials)
+     - You're on the right page! Look for these tabs at the top:
+       - **App information** (or "OAuth consent screen")
+       - **Scopes**
+       - **Test users** (if External)
+       - **Summary**
+     - Click on **"App information"** tab first to fill in the app details
+     - Then go to **"Scopes"** tab to add calendar permission
+     - You can skip to Step 5 (Create OAuth credentials) after configuring these
   3. **App Information** page:
      - **App name**: "Thara Productivity Agent" (or any name you like)
      - **User support email**: Your email address
