@@ -26,9 +26,37 @@
   - Go to [Google Cloud Console](https://console.cloud.google.com/)
   - Create new project or select existing
   - Enable Google Calendar API
+  - **Step 4: Configure OAuth Consent Screen** (see detailed instructions below)
   - Create OAuth 2.0 credentials (Web application)
   - Set redirect URI: `http://localhost:8000/auth/callback` (for local) or your deployment URL
   - Download credentials JSON (optional, we'll use env vars)
+  
+  **Detailed Step 4 - OAuth Consent Screen:**
+  1. In Google Cloud Console, go to: **APIs & Services** → **OAuth consent screen** (left sidebar)
+  2. You'll see a form. Fill it out:
+     - **User Type**: Select "External" (unless you have Google Workspace, then use "Internal")
+     - Click "Create"
+  3. **App Information** page:
+     - **App name**: "Thara Productivity Agent" (or any name you like)
+     - **User support email**: Your email address
+     - **App logo**: (optional, skip for now)
+     - **App domain**: (optional, skip for now)
+     - **Developer contact information**: Your email address
+     - Click "Save and Continue"
+  4. **Scopes** page:
+     - Click "Add or Remove Scopes"
+     - Search for "calendar" 
+     - Check the box for: `https://www.googleapis.com/auth/calendar`
+     - Click "Update"
+     - Click "Save and Continue"
+  5. **Test users** page (if External):
+     - You can add your email as a test user (optional for now)
+     - Click "Save and Continue"
+  6. **Summary** page:
+     - Review everything
+     - Click "Back to Dashboard"
+  
+  **Note**: If you see "Publishing status: Testing", that's fine for now. You can use it in testing mode.
   
 - [x] **1.4** Set up Database ✅
   - **Option A: Supabase (Recommended - Free tier)**
