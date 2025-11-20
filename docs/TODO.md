@@ -35,7 +35,7 @@
     - Go to [supabase.com](https://supabase.com)
     - Create account and new project
     - Get connection string from Settings > Database
-    - ⚠️ **IMPORTANT**: Enable pgvector extension: Go to SQL Editor, run: `CREATE EXTENSION IF NOT EXISTS vector;`
+    - ✅ Enable pgvector extension: Go to SQL Editor, run: `CREATE EXTENSION IF NOT EXISTS vector;` ✅
   - **Option B: Railway PostgreSQL**
     - Go to [railway.app](https://railway.app)
     - Create account
@@ -250,12 +250,11 @@ If you encounter issues, check:
 - ✅ 1.1 - Telegram Bot Token
 - ✅ 1.2 - OpenAI API Key
 - ✅ 1.2b - Gemini API Key (optional)
-- ✅ 1.4 - Database (Supabase) - **Don't forget pgvector extension!**
+- ✅ 1.4 - Database (Supabase) + pgvector extension enabled
 
 **Next Steps**: 
-1. ⚠️ Enable pgvector in Supabase (if not done yet)
-2. Set up Google Cloud Project (1.3) - for Calendar API
-3. Create .env file (1.5) - add all your keys
+1. Set up Google Cloud Project (1.3) - for Calendar API
+2. Create .env file (1.5) - add all your keys
 
 **Next Milestone**: Complete Phase 1 and move to Phase 2  
 **Estimated Time to MVP**: 3-4 hours  
