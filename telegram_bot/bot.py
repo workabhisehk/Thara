@@ -44,6 +44,10 @@ def setup_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("tasks", tasks.tasks_command))
     application.add_handler(CommandHandler("calendar", calendar_handler.calendar_command))
     
+    # Prioritization handler
+    from telegram_bot.handlers import prioritization
+    application.add_handler(CommandHandler("prioritize", prioritization.prioritize_command))
+    
     # Message handlers (natural language)
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND,

@@ -91,6 +91,15 @@ async def init_scheduler():
         replace_existing=True
     )
     
+    # Time-based reminders - every 30 minutes
+    from scheduler.time_reminders import check_time_based_reminders
+    scheduler.add_job(
+        check_time_based_reminders,
+        trigger=IntervalTrigger(minutes=30),
+        id='time_based_reminders',
+        replace_existing=True
+    )
+    
     scheduler.start()
     logger.info("Scheduler started")
 
