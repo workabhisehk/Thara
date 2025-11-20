@@ -91,12 +91,13 @@
     - Create new project > Add PostgreSQL
     - Get connection string from Variables tab
   
-- [ ] **1.5** Create `.env` file
+- [x] **1.5** Create `.env` file ✅
   - Copy `.env.example` to `.env`
   - Fill in all required values:
     ```
     TELEGRAM_BOT_TOKEN=your_token_here
-    GEMINI_API_KEY=your_key_here
+    OPENAI_API_KEY=your_key_here
+    GEMINI_API_KEY=your_key_here (optional)
     DATABASE_URL=postgresql://user:pass@host:port/db
     GOOGLE_CLIENT_ID=your_client_id
     GOOGLE_CLIENT_SECRET=your_client_secret
@@ -294,17 +295,18 @@ If you encounter issues, check:
 
 ## 📊 Progress Tracking
 
-**Current Phase**: Phase 1 - Environment Setup  
-**Completed**: 
+**Current Phase**: Phase 2 - Database Setup  
+**Phase 1 Completed**: ✅
 - ✅ 1.1 - Telegram Bot Token
 - ✅ 1.2 - OpenAI API Key
 - ✅ 1.2b - Gemini API Key (optional)
-- ✅ 1.3 - Google Cloud Project + OAuth Consent Screen
+- ✅ 1.3 - Google Cloud Project + OAuth Credentials
 - ✅ 1.4 - Database (Supabase) + pgvector extension enabled
+- ✅ 1.5 - .env file created with all credentials
 
-**Next Steps**: 
-1. Create OAuth 2.0 Credentials (Step 5 in 1.3) - Get Client ID and Secret
-2. Create .env file (1.5) - add all your keys
+**Next Steps (Phase 2)**: 
+1. Install Python dependencies (2.1)
+2. Run database migrations (2.2)
 
 **Next Milestone**: Complete Phase 1 and move to Phase 2  
 **Estimated Time to MVP**: 3-4 hours  
