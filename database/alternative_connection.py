@@ -6,27 +6,42 @@ import os
 import sys
 from typing import Optional
 import logging
+from pathlib import Path
+
+# Fix calendar module naming conflict
+# The project's calendar/ directory shadows Python's built-in calendar module
+# We need to ensure Python's standard library calendar is used for imports
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) in sys.path and sys.path.index(str(project_root)) < len([p for p in sys.path if 'site-packages' in p]):
+    # Remove project root temporarily during Supabase imports
+    project_path = str(project_root)
+    sys.path.remove(project_path)
 
 logger = logging.getLogger(__name__)
 
-# Try to import Supabase client
+# Try to import Supabase client (after fixing path to avoid calendar conflict)
 try:
-    from supabase import create_client
-    try:
-        from supabase.client import Client
-    except ImportError:
-        from typing import TYPE_CHECKING
-        if TYPE_CHECKING:
+    # Import from site-packages first to avoid calendar module conflict
+    import importlib.util
+    spec = importlib.util.find_spec("supabase")
+    if spec and spec.origin:
+        # Supabase is available, import it
+        from supabase import create_client
+        try:
             from supabase.client import Client
-        else:
+        except ImportError:
             Client = None
-    SUPABASE_AVAILABLE = True
-except ImportError:
+        SUPABASE_AVAILABLE = True
+    else:
+        raise ImportError("Supabase not found")
+except (ImportError, Exception) as e:
     SUPABASE_AVAILABLE = False
-    Client = None  # Type stub
-    if not os.getenv("SUPABASE_URL"):
-        # Only warn if we're trying to use it
-        pass
+    Client = None
+    # Don't log warning if just testing
+
+# Restore project root to path for config import
+if project_path not in sys.path:
+    sys.path.insert(0, project_path)
 
 from config import settings
 
