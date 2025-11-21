@@ -102,7 +102,7 @@ class Task(Base):
     
     # Dependencies
     depends_on_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
-    metadata = Column(JSON, nullable=True)  # Additional flexible data
+    task_metadata = Column(JSON, nullable=True)  # Additional flexible data (renamed from 'metadata' - reserved in SQLAlchemy)
     
     # Timestamps
     created_at = Column(DateTime, server_default=func.now())
