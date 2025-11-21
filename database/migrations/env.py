@@ -2,7 +2,7 @@
 Alembic migration environment configuration.
 """
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config
+from sqlalchemy import engine_from_config, create_engine
 from sqlalchemy import pool
 from alembic import context
 import os
@@ -12,9 +12,13 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 # Import Base and models
-from database.connection import Base
+# Don't import connection here as it creates async engine
+# Import models directly
 from database.models import *  # noqa: F401, F403
 from config import settings
+
+# Import Base separately
+from database.connection import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -50,7 +54,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    # Use settings directly to avoid async engine creation
+    url = settings.database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -69,9 +74,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    # Use settings directly to create sync engine for migrations
+    # Alembic needs sync engine, not async
+    connectable = create_engine(
+        settings.database_url,
         poolclass=pool.NullPool,
     )
 
