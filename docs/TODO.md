@@ -116,7 +116,7 @@
 **Estimated Time**: 15-30 minutes
 
 #### For You:
-- [ ] **2.1** Install Python dependencies
+- [x] **2.1** Install Python dependencies ✅
   ```bash
   # Create virtual environment (if not done)
   python3 -m venv venv
