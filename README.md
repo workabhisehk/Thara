@@ -16,17 +16,17 @@ A context-aware conversational AI assistant that helps you manage tasks, schedul
 
 - **Backend**: Python 3.11+ with FastAPI
 - **AI Framework**: LangChain with OpenAI API (Gemini fallback)
-- **Memory System**: LlamaIndex + Supabase PostgreSQL with pgvector
+- **Memory System**: LlamaIndex + Neon DB PostgreSQL with pgvector
 - **Telegram Bot**: python-telegram-bot
 - **Calendar**: Google Calendar API v3
-- **Deployment**: Railway.app or Supabase
+- **Deployment**: Railway.app or any PostgreSQL-compatible platform
 
 ## Setup
 
 ### Prerequisites
 
 - Python 3.11 or higher
-- PostgreSQL database (Supabase recommended)
+- PostgreSQL database (Neon DB recommended)
 - Telegram Bot Token
 - Google Cloud Project with Calendar API enabled
 - Gemini API key

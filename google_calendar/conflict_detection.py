@@ -4,7 +4,7 @@ Calendar conflict detection and resolution.
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
-from calendar.client import list_events
+from google_calendar.client import list_events
 
 logger = logging.getLogger(__name__)
 

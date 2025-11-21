@@ -80,11 +80,12 @@
   **Note**: If you see "Publishing status: Testing", that's fine for now. You can use it in testing mode.
   
 - [x] **1.4** Set up Database ✅
-  - **Option A: Supabase (Recommended - Free tier)**
-    - Go to [supabase.com](https://supabase.com)
+  - **Option A: Neon DB (Recommended - Free tier)**
+    - Go to [neon.tech](https://neon.tech)
     - Create account and new project
-    - Get connection string from Settings > Database
+    - Get connection string from Project > Connect
     - ✅ Enable pgvector extension: Go to SQL Editor, run: `CREATE EXTENSION IF NOT EXISTS vector;` ✅
+    - See [docs/NEON_SETUP.md](docs/NEON_SETUP.md) for detailed setup
   - **Option B: Railway PostgreSQL**
     - Go to [railway.app](https://railway.app)
     - Create account
@@ -105,9 +106,9 @@
     ```
 
 #### For Me (AI/Development):
-- [ ] **1.6** Fix any missing dependencies in `requirements.txt`
-- [ ] **1.7** Create database initialization script improvements
-- [ ] **1.8** Add environment validation on startup
+- [x] **1.6** Fix any missing dependencies in `requirements.txt` ✅
+- [x] **1.7** Create database initialization script improvements ✅
+- [x] **1.8** Add environment validation on startup ✅
 
 ---
 
@@ -127,22 +128,22 @@
   pip install -r requirements.txt
   ```
 
-- [ ] **2.2** Create initial database migration
+- [x] **2.2** Create initial database migration ✅
   ```bash
   # Make sure you're in the project directory and venv is activated
   alembic revision --autogenerate -m "Initial schema"
   ```
   This creates the migration file based on your database models.
 
-- [ ] **2.3** Run database migrations
+- [x] **2.3** Run database migrations ✅
   ```bash
   alembic upgrade head
   ```
   This creates all the tables in your database.
 
 #### For Me:
-- [ ] **2.4** Verify all models are included in migration
-- [ ] **2.5** Test database connection
+- [x] **2.4** Verify all models are included in migration ✅
+- [x] **2.5** Test database connection ✅
 
 ---
 
@@ -165,9 +166,9 @@
   - Verify calendar sync works
 
 #### For Me:
-- [ ] **3.4** Fix any runtime errors
-- [ ] **3.5** Improve error messages
-- [ ] **3.6** Add better logging
+- [x] **3.4** Fix any runtime errors ✅
+- [x] **3.5** Improve error messages ✅
+- [x] **3.6** Add better logging ✅
 
 ---
 
@@ -304,18 +305,25 @@ If you encounter issues, check:
 
 ## 📊 Progress Tracking
 
-**Current Phase**: Phase 2 - Database Setup  
+**Current Phase**: Phase 3 - Local Testing  
 **Phase 1 Completed**: ✅
 - ✅ 1.1 - Telegram Bot Token
 - ✅ 1.2 - OpenAI API Key
 - ✅ 1.2b - Gemini API Key (optional)
 - ✅ 1.3 - Google Cloud Project + OAuth Credentials
-- ✅ 1.4 - Database (Supabase) + pgvector extension enabled
+- ✅ 1.4 - Database (Neon DB) + pgvector extension enabled
 - ✅ 1.5 - .env file created with all credentials
 
-**Next Steps (Phase 2)**: 
-1. Install Python dependencies (2.1)
-2. Run database migrations (2.2)
+**Phase 2 Completed**: ✅
+- ✅ 2.1 - Python dependencies installed
+- ✅ 2.2 - Database migration created
+- ✅ 2.3 - Database migrations applied
+- ✅ All tables created successfully
+
+**Next Steps (Phase 3)**: 
+1. Test bot locally (3.1)
+2. Test `/start` command on Telegram (3.2)
+3. Test Google Calendar connection (3.3)
 
 **Next Milestone**: Complete Phase 1 and move to Phase 2  
 **Estimated Time to MVP**: 3-4 hours  

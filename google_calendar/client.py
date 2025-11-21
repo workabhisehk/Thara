@@ -5,7 +5,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from googleapiclient.errors import HttpError
-from calendar.auth import get_user_credentials, get_calendar_service
+from google_calendar.auth import get_user_credentials, get_calendar_service
 from database.models import CalendarEvent, User
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

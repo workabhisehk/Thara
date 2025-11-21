@@ -1,6 +1,6 @@
 """
 LlamaIndex setup for vector store and indexing.
-Uses Supabase PostgreSQL with pgvector for vector storage.
+Uses Neon DB PostgreSQL with pgvector for vector storage.
 """
 import logging
 from llama_index.core import VectorStoreIndex, Settings

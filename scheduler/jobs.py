@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def sync_calendar_for_all_users():
     """Sync calendar for all connected users."""
-    from calendar.sync import sync_calendar
+    from google_calendar.sync import sync_calendar
     
     async with AsyncSessionLocal() as session:
         stmt = select(User).where(
@@ -83,7 +83,7 @@ async def init_scheduler():
     )
     
     # Calendar sync - every 4 hours
-    from calendar.sync import sync_calendar
+    from google_calendar.sync import sync_calendar
     scheduler.add_job(
         sync_calendar_for_all_users,
         trigger=IntervalTrigger(hours=4),

@@ -4,8 +4,8 @@ Calendar synchronization.
 import logging
 from typing import Optional, Dict
 from datetime import datetime, timedelta
-from calendar.client import list_events
-from calendar.auth import get_user_credentials
+from google_calendar.client import list_events
+from google_calendar.auth import get_user_credentials
 from database.models import CalendarEvent, User
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

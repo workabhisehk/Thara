@@ -4,8 +4,8 @@ Scheduling logic for tasks and events.
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from calendar.conflict_detection import detect_conflicts, find_available_slots
-from calendar.client import create_event
+from google_calendar.conflict_detection import detect_conflicts, find_available_slots
+from google_calendar.client import create_event
 from database.models import User, Task
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

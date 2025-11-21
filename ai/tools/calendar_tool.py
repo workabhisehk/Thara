@@ -2,7 +2,7 @@
 LangChain tool for calendar operations.
 """
 from langchain.tools import tool
-from calendar.client import list_events, create_event
+from google_calendar.client import list_events, create_event
 from database.connection import AsyncSessionLocal
 
 

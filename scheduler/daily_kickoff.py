@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from database.connection import AsyncSessionLocal
 from database.models import User
 from sqlalchemy import select
-from calendar.client import list_events
+from google_calendar.client import list_events
 from tasks.priority_queue import get_priority_queue, get_upcoming_deadlines
 from telegram_bot.bot import create_application
 

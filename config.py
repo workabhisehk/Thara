@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
     gemini_api_key: Optional[str] = Field(None, env="GEMINI_API_KEY")
     
-    # Database
+    # Database (Neon DB)
     database_url: str = Field(..., env="DATABASE_URL")
     
     def __init__(self, **kwargs):
@@ -26,8 +26,6 @@ class Settings(BaseSettings):
         # Clean up database_url if it has "DATABASE_URL=" prefix
         if hasattr(self, 'database_url') and self.database_url.startswith("DATABASE_URL="):
             self.database_url = self.database_url.split("=", 1)[1].strip().strip('"').strip("'")
-    supabase_url: Optional[str] = Field(None, env="SUPABASE_URL")
-    supabase_key: Optional[str] = Field(None, env="SUPABASE_KEY")
     
     # Google Calendar
     google_client_id: str = Field(..., env="GOOGLE_CLIENT_ID")
