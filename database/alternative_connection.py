@@ -10,63 +10,14 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Fix calendar module naming conflict
-# The project's calendar/ directory shadows Python's built-in calendar module
-# Import supabase before importing config to avoid the conflict
-def _import_supabase_safely():
-    """Import Supabase client, handling calendar module conflict."""
-    try:
-        # Temporarily rename calendar in sys.modules if needed
-        import sys as sys_module
-        if 'calendar' in sys_module.modules and hasattr(sys_module.modules['calendar'], '__file__'):
-            calendar_path = sys_module.modules['calendar'].__file__
-            if 'Thara' in str(calendar_path) and 'calendar' in str(calendar_path):
-                # This is our local calendar module, temporarily remove it
-                temp_calendar = sys_module.modules.pop('calendar', None)
-                try:
-                    from supabase import create_client
-                    try:
-                        from supabase.client import Client
-                    except ImportError:
-                        Client = None
-                    return create_client, Client, True
-                finally:
-                    # Restore calendar module
-                    if temp_calendar:
-                        sys_module.modules['calendar'] = temp_calendar
-                    else:
-                        # Reload standard library calendar
-                        import importlib
-                        importlib.import_module('calendar')
-        
-        # Normal import path
-        from supabase import create_client
-        try:
-            from supabase.client import Client
-        except ImportError:
-            Client = None
-        return create_client, Client, True
-    except ImportError:
-        return None, None, False
-    except Exception:
-        # If there's any other error, try without calendar fix
-        try:
-            from supabase import create_client
-            try:
-                from supabase.client import Client
-            except ImportError:
-                Client = None
-            return create_client, Client, True
-        except Exception:
-            return None, None, False
-
-# Try to import Supabase client
-_create_client, Client, SUPABASE_AVAILABLE = _import_supabase_safely()
-
-if SUPABASE_AVAILABLE:
-    create_client = _create_client
-else:
+# Import Supabase client using safe wrapper that handles calendar conflict
+try:
+    from database.supabase_client import create_client, Client
+    SUPABASE_AVAILABLE = create_client is not None and Client is not None
+except (ImportError, Exception):
+    SUPABASE_AVAILABLE = False
     create_client = None
+    Client = None
 
 from config import settings
 
