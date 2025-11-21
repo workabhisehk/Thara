@@ -8,40 +8,65 @@ from typing import Optional
 import logging
 from pathlib import Path
 
-# Fix calendar module naming conflict
-# The project's calendar/ directory shadows Python's built-in calendar module
-# We need to ensure Python's standard library calendar is used for imports
-project_root = Path(__file__).parent.parent.parent
-if str(project_root) in sys.path and sys.path.index(str(project_root)) < len([p for p in sys.path if 'site-packages' in p]):
-    # Remove project root temporarily during Supabase imports
-    project_path = str(project_root)
-    sys.path.remove(project_path)
-
 logger = logging.getLogger(__name__)
 
-# Try to import Supabase client (after fixing path to avoid calendar conflict)
-try:
-    # Import from site-packages first to avoid calendar module conflict
-    import importlib.util
-    spec = importlib.util.find_spec("supabase")
-    if spec and spec.origin:
-        # Supabase is available, import it
+# Fix calendar module naming conflict
+# The project's calendar/ directory shadows Python's built-in calendar module
+# Import supabase before importing config to avoid the conflict
+def _import_supabase_safely():
+    """Import Supabase client, handling calendar module conflict."""
+    try:
+        # Temporarily rename calendar in sys.modules if needed
+        import sys as sys_module
+        if 'calendar' in sys_module.modules and hasattr(sys_module.modules['calendar'], '__file__'):
+            calendar_path = sys_module.modules['calendar'].__file__
+            if 'Thara' in str(calendar_path) and 'calendar' in str(calendar_path):
+                # This is our local calendar module, temporarily remove it
+                temp_calendar = sys_module.modules.pop('calendar', None)
+                try:
+                    from supabase import create_client
+                    try:
+                        from supabase.client import Client
+                    except ImportError:
+                        Client = None
+                    return create_client, Client, True
+                finally:
+                    # Restore calendar module
+                    if temp_calendar:
+                        sys_module.modules['calendar'] = temp_calendar
+                    else:
+                        # Reload standard library calendar
+                        import importlib
+                        importlib.import_module('calendar')
+        
+        # Normal import path
         from supabase import create_client
         try:
             from supabase.client import Client
         except ImportError:
             Client = None
-        SUPABASE_AVAILABLE = True
-    else:
-        raise ImportError("Supabase not found")
-except (ImportError, Exception) as e:
-    SUPABASE_AVAILABLE = False
-    Client = None
-    # Don't log warning if just testing
+        return create_client, Client, True
+    except ImportError:
+        return None, None, False
+    except Exception:
+        # If there's any other error, try without calendar fix
+        try:
+            from supabase import create_client
+            try:
+                from supabase.client import Client
+            except ImportError:
+                Client = None
+            return create_client, Client, True
+        except Exception:
+            return None, None, False
 
-# Restore project root to path for config import
-if project_path not in sys.path:
-    sys.path.insert(0, project_path)
+# Try to import Supabase client
+_create_client, Client, SUPABASE_AVAILABLE = _import_supabase_safely()
+
+if SUPABASE_AVAILABLE:
+    create_client = _create_client
+else:
+    create_client = None
 
 from config import settings
 
@@ -49,14 +74,14 @@ from config import settings
 _supabase_client: Optional['Client'] = None
 
 
-def get_supabase_client() -> Optional[Client]:
+def get_supabase_client() -> Optional['Client']:
     """
     Get Supabase client instance for REST API access.
     This works even if direct PostgreSQL connection fails.
     """
     global _supabase_client
     
-    if not SUPABASE_AVAILABLE:
+    if not SUPABASE_AVAILABLE or not create_client:
         logger.error("Supabase client not available. Install with: pip install supabase")
         return None
     
