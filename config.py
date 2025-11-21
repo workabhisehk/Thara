@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     
     # Database
     database_url: str = Field(..., env="DATABASE_URL")
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Clean up database_url if it has "DATABASE_URL=" prefix
+        if hasattr(self, 'database_url') and self.database_url.startswith("DATABASE_URL="):
+            self.database_url = self.database_url.split("=", 1)[1].strip().strip('"').strip("'")
     supabase_url: Optional[str] = Field(None, env="SUPABASE_URL")
     supabase_key: Optional[str] = Field(None, env="SUPABASE_KEY")
     

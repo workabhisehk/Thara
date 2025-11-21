@@ -25,7 +25,29 @@ from database.connection import Base
 config = context.config
 
 # Set the database URL from settings
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Handle URL-encoded passwords with % characters by disabling interpolation
+db_url = settings.database_url
+
+# Clean up URL if it has "DATABASE_URL=" prefix (shouldn't happen, but just in case)
+if db_url.startswith("DATABASE_URL="):
+    db_url = db_url.split("=", 1)[1].strip().strip('"').strip("'")
+
+# Disable interpolation in ConfigParser to handle % characters in URL-encoded passwords
+import configparser
+config.file_config._interpolation = configparser.Interpolation()
+
+# Set the URL directly
+try:
+    config.set_main_option("sqlalchemy.url", db_url)
+except (ValueError, TypeError):
+    # Fallback: set directly in the config's attributes
+    if not hasattr(config, 'attributes'):
+        config.attributes = {}
+    config.attributes['sqlalchemy.url'] = db_url
+    # Also try to set it in the section
+    if not config.file_config.has_section(config.config_ini_section):
+        config.file_config.add_section(config.config_ini_section)
+    config.file_config.set(config.config_ini_section, 'url', db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
