@@ -29,41 +29,69 @@ logger = logging.getLogger(__name__)
 
 async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Route onboarding-specific callbacks."""
-    query = update.callback_query
-    callback_data = query.data
-    user = update.effective_user
-    
-    # Acknowledge callback immediately
-    await query.answer()
-    
-    logger.info(f"Onboarding callback: {callback_data} from user {user.id}")
-    
-    async with AsyncSessionLocal() as session:
-        stmt = select(User).where(User.telegram_id == user.id)
-        result = await session.execute(stmt)
-        db_user = result.scalar_one_or_none()
+    try:
+        query = update.callback_query
+        callback_data = query.data
+        user = update.effective_user
         
-        if not db_user:
-            await query.message.reply_text("Please start with /start first.")
-            return
+        # Acknowledge callback immediately
+        await query.answer()
         
-        # Route based on callback type
-        if callback_data.startswith("pillar_toggle_"):
-            await handle_pillar_toggle(update, context, session, db_user)
-        elif callback_data == "onboarding_add_custom_pillar":
-            await handle_add_custom_pillar_callback(update, context, session, db_user)
-        elif callback_data == "onboarding_pillars_done":
-            await handle_pillars_done(update, context, session, db_user)
-        elif callback_data == "onboarding_pillars_skip":
-            await handle_pillars_skip(update, context, session, db_user)
-        elif callback_data.startswith("timezone_"):
-            await handle_timezone_callback(update, context, session, db_user)
-        elif callback_data in ["yes", "no", "maybe_later"]:
-            await handle_onboarding_yes_no(update, context, session, db_user)
-        elif callback_data == "tell_me_more":
-            await handle_tell_me_more(update, context, session, db_user)
+        logger.info(f"Onboarding callback: {callback_data} from user {user.id}")
+        
+        async with AsyncSessionLocal() as session:
+            stmt = select(User).where(User.telegram_id == user.id)
+            result = await session.execute(stmt)
+            db_user = result.scalar_one_or_none()
+            
+            if not db_user:
+                await query.message.reply_text("Please start with /start first.")
+                return
+            
+            # Route based on callback type
+            if callback_data.startswith("pillar_toggle_"):
+                await handle_pillar_toggle(update, context, session, db_user)
+            elif callback_data == "onboarding_add_custom_pillar":
+                await handle_add_custom_pillar_callback(update, context, session, db_user)
+            elif callback_data == "onboarding_pillars_done":
+                await handle_pillars_done(update, context, session, db_user)
+            elif callback_data == "onboarding_pillars_skip":
+                await handle_pillars_skip(update, context, session, db_user)
+            elif callback_data.startswith("timezone_"):
+                await handle_timezone_callback(update, context, session, db_user)
+            elif callback_data in ["yes", "no", "maybe_later"]:
+                await handle_onboarding_yes_no(update, context, session, db_user)
+            elif callback_data == "tell_me_more":
+                await handle_tell_me_more(update, context, session, db_user)
+            else:
+                await query.message.edit_text(f"Unknown callback: {callback_data}")
+    except ImportError as e:
+        error_msg = str(e).lower()
+        if "greenlet" in error_msg:
+            logger.error(f"Greenlet error in handle_onboarding_callbacks: {e}", exc_info=True)
+            try:
+                await query.message.reply_text(
+                    "⚠️ Error: Missing dependency (greenlet). "
+                    "Please contact support or check your installation."
+                )
+            except Exception:
+                pass
         else:
-            await query.message.edit_text(f"Unknown callback: {callback_data}")
+            raise
+    except Exception as e:
+        logger.error(f"Error in handle_onboarding_callbacks: {e}", exc_info=True)
+        error_msg = str(e).lower()
+        if "greenlet" in error_msg:
+            try:
+                await query.message.reply_text(
+                    "⚠️ Error: Missing dependency (greenlet). "
+                    "Please contact support or check your installation."
+                )
+            except Exception:
+                pass
+        else:
+            # Re-raise to trigger global error handler
+            raise
 
 
 async def handle_pillar_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE,

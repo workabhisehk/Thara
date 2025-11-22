@@ -53,8 +53,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 set_conversation_state(user.id, ConversationState.ONBOARDING_PILLARS)
                 
                 # Use the comprehensive onboarding flow
-                async with AsyncSessionLocal() as session:
-                    await show_pillar_selection(update, context, session, db_user)
+                await show_pillar_selection(update, context, session, db_user)
     except Exception as e:
         logger.error("=" * 80)
         logger.error(f"❌ ERROR in start_command handler!")
