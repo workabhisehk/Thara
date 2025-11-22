@@ -107,7 +107,7 @@ async def handle_pillar_toggle(update: Update, context: ContextTypes.DEFAULT_TYP
             selected_display += f", {cp} (custom)"
     
     message = (
-        "Hello! 👋 I'm your AI Productivity Agent. My mission is to help you manage tasks, "
+        "Hello! 👋 I'm **Thara**, your AI Productivity Assistant. My mission is to help you manage tasks, "
         "schedule commitments, and maintain productivity across work, education, and personal domains.\n\n"
         "Let's get you set up! This will only take a few minutes.\n\n"
         "First, which categories (pillars) would you like to track?\n"

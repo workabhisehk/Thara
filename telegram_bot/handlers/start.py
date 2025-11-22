@@ -179,80 +179,118 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
 
 
 async def handle_natural_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle natural language with AI."""
+    """Handle natural language with AI - conversational understanding throughout."""
     try:
         user = update.effective_user
         text = update.message.text if update.message else "No text"
         
         logger.info(f"🔵 Processing natural language message from user {user.id}: '{text[:100]}'")
         
-        # IMMEDIATE RESPONSE - Show bot is working
-        try:
-            await update.message.reply_text(
-                "🤔 Processing your message..."
-            )
-        except Exception as e:
-            logger.error(f"Failed to send immediate response: {e}")
+        # Get conversation history for context
+        from memory.context_retrieval import get_context_for_ai
+        from database.connection import AsyncSessionLocal
         
-        # Try to extract intent and generate AI response
-        try:
-            from ai.intent_extraction import extract_intent
-            from database.connection import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            # Get conversation context
+            conversation_context = await get_context_for_ai(session, user.id, text)
             
-            async with AsyncSessionLocal() as session:
-                intent_result = await extract_intent(text, user.id, session)
-                logger.info(f"✅ Extracted intent: {intent_result.get('intent')}, entities: {intent_result.get('entities')}")
+            # Use AI to understand the conversation naturally
+            from ai.conversation_understanding import understand_conversation
+            
+            # Get recent conversation history
+            recent_conversations = []
+            if conversation_context.get("recent_conversations"):
+                recent_conversations = [
+                    f"{'User' if conv['is_from_user'] else 'Thara'}: {conv['text'][:100]}"
+                    for conv in conversation_context["recent_conversations"][:3]
+                ]
+            
+            # Understand user's message using AI
+            understanding = await understand_conversation(
+                text,
+                conversation_history=recent_conversations,
+                current_state=str(get_conversation_state(user.id))
+            )
+            
+            intent = understanding.get("intent", "general_chat")
+            entities = understanding.get("entities", {})
+            confidence = understanding.get("confidence", 0.5)
+            action = understanding.get("action", "respond")
+            
+            logger.info(f"✅ Understood: intent={intent}, confidence={confidence}, action={action}")
+            
+            # Handle based on understood intent and action
+            if action == "create_task" or (intent == "add_task" and confidence >= 0.6):
+                # Route to natural language task creation
+                intent_result = {
+                    "intent": intent,
+                    "entities": entities,
+                    "confidence": confidence
+                }
+                from telegram_bot.handlers.natural_language_tasks import handle_natural_language_task_creation
+                await handle_natural_language_task_creation(update, context, intent_result)
+                return
+            
+            elif action == "show_tasks" or intent == "show_tasks":
+                from telegram_bot.handlers.tasks import tasks_command
+                await tasks_command(update, context)
+                return
+            
+            elif action == "view_calendar" or intent in ["calendar_query", "schedule"]:
+                from telegram_bot.handlers.calendar_handler import calendar_command
+                await calendar_command(update, context)
+                return
+            
+            elif understanding.get("needs_clarification"):
+                # Generate clarifying response
+                from ai.conversation_understanding import generate_conversational_response
+                response = await generate_conversational_response(
+                    text,
+                    intent,
+                    entities,
+                    conversation_context
+                )
+                await update.message.reply_text(response)
+                return
+            
+            else:
+                # Generate conversational response using AI
+                from ai.conversation_understanding import generate_conversational_response
+                from ai.response_generation import generate_context_aware_response
                 
-                # Generate response based on intent
-                intent = intent_result.get("intent", "general")
-                entities = intent_result.get("entities", {})
-                confidence = intent_result.get("confidence", 0.5)
-                
-                # Route to natural language task creation if intent is add_task with high confidence
-                if intent == "add_task" and confidence >= 0.7:
-                    from telegram_bot.handlers.natural_language_tasks import handle_natural_language_task_creation
-                    await handle_natural_language_task_creation(update, context, intent_result)
-                    return
-                
-                # Generate context-aware response for other intents
-                if intent == "show_tasks":
-                    from telegram_bot.handlers.tasks import tasks_command
-                    await tasks_command(update, context)
-                elif intent == "schedule" or "calendar" in text.lower():
-                    from telegram_bot.handlers.calendar_handler import calendar_command
-                    await calendar_command(update, context)
-                elif intent == "general_chat" or confidence < 0.7:
-                    # Generate context-aware response
-                    from ai.response_generation import generate_context_aware_response
-                    async with AsyncSessionLocal() as session:
-                        response_text = await generate_context_aware_response(
-                            text,
-                            user.id,
-                            intent,
-                            entities,
-                            session
-                        )
-                        await update.message.reply_text(response_text)
-                else:
-                    # Default response with context
-                    from ai.response_generation import generate_context_aware_response
-                    async with AsyncSessionLocal() as session:
-                        response_text = await generate_context_aware_response(
-                            text,
-                            user.id,
-                            intent,
-                            entities,
-                            session
-                        )
-                        await update.message.reply_text(response_text)
+                # Try conversational response first, fallback to context-aware
+                try:
+                    response = await generate_conversational_response(
+                        text,
+                        intent,
+                        entities,
+                        {
+                            "tasks": conversation_context.get("active_tasks", []),
+                            "calendar_events": conversation_context.get("calendar_events", []),
+                            "user_preferences": conversation_context.get("user_preferences", {})
+                        }
+                    )
+                    await update.message.reply_text(response)
+                except Exception as e:
+                    logger.warning(f"Conversational response failed, using context-aware: {e}")
+                    # Fallback to context-aware response
+                    response_text = await generate_context_aware_response(
+                        text,
+                        user.id,
+                        intent,
+                        entities,
+                        session
+                    )
+                    await update.message.reply_text(response_text)
                     
         except Exception as ai_error:
             logger.error(f"❌ Error in AI processing: {ai_error}", exc_info=True)
-            # Fallback response if AI processing fails
+            # Fallback: friendly conversational response
             await update.message.reply_text(
-                f"👋 I received your message: '{text[:100]}'\n\n"
-                "I'm still learning! Please use /help to see available commands. "
-                "Natural language understanding is coming soon! 🚀"
+                f"Hi! I'm **Thara**. I understand you said: '{text[:100]}'\n\n"
+                "I'm working on understanding that better. "
+                "You can tell me naturally what you need, or use commands like /tasks, /calendar, or /help.\n\n"
+                "Just chat with me - I'll understand! 😊"
             )
             
     except Exception as e:

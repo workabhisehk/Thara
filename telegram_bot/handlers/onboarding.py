@@ -228,9 +228,22 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
             set_conversation_state(user.id, ConversationState.ONBOARDING_PILLARS)
             await show_pillar_selection(update, context, session, db_user)
         else:
-            await update.message.reply_text(
-                "Please use the buttons provided or type /start to restart onboarding."
-            )
+            # Use AI to understand what user is saying
+            from ai.onboarding_parser import parse_onboarding_message
+            parsed = await parse_onboarding_message(text, current_step=str(state))
+            
+            # If user mentioned pillars, handle it
+            if parsed.get("pillars") and parsed.get("response_type") == "pillars":
+                await handle_pillar_selection_text(update, context, session, db_user)
+            elif parsed.get("response_type") == "work_hours" and parsed.get("work_hours"):
+                await handle_work_hours_input(update, context, session, db_user)
+            else:
+                # Generate friendly response
+                await update.message.reply_text(
+                    "I'm **Thara**! 😊 I understand you're trying to tell me something.\n\n"
+                    "You can use the buttons below, or just tell me naturally what you need - I'll understand!\n\n"
+                    "Or type /start to restart onboarding if you'd like."
+                )
 
 
 async def show_pillar_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, 
