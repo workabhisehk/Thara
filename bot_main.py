@@ -11,13 +11,18 @@ from config import settings
 
 # Initialize Sentry for error tracking (before any other imports that might error)
 if settings.sentry_dsn and settings.sentry_enabled:
-    import sentry_sdk
-    from sentry_sdk.integrations.logging import LoggingIntegration
-    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-    from sentry_sdk.integrations.asyncio import AsyncioIntegration
-    
-    # Configure Sentry
-    sentry_sdk.init(
+    try:
+        import sentry_sdk
+    except ImportError:
+        logging.getLogger(__name__).warning("⚠️ Sentry SDK not installed. Error tracking disabled.")
+        sentry_sdk = None
+    if sentry_sdk:
+        from sentry_sdk.integrations.logging import LoggingIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        from sentry_sdk.integrations.asyncio import AsyncioIntegration
+        
+        # Configure Sentry
+        sentry_sdk.init(
         dsn=settings.sentry_dsn,
         # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring
         traces_sample_rate=0.1,  # 10% of transactions for performance
@@ -41,10 +46,10 @@ if settings.sentry_dsn and settings.sentry_enabled:
             KeyboardInterrupt,
             SystemExit,
         ],
-        # Add user context to errors
-        before_send=lambda event, hint: event,
-    )
-    logging.getLogger(__name__).info("✅ Sentry initialized for error tracking")
+            # Add user context to errors
+            before_send=lambda event, hint: event,
+        )
+        logging.getLogger(__name__).info("✅ Sentry initialized for error tracking")
 
 # Configure logging with detailed output
 logging.basicConfig(
