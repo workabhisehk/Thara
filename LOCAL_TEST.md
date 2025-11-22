@@ -30,8 +30,8 @@ pip show langgraph
 
 **Option B: Manual installation (if script fails)**
 ```bash
-# Install core dependencies first
-pip install fastapi==0.104.1 uvicorn[standard]==0.24.0 "pydantic>=2.7.4,<3.0.0"
+# Install core dependencies first (quote brackets for zsh)
+pip install fastapi==0.104.1 "uvicorn[standard]==0.24.0" "pydantic>=2.7.4,<3.0.0"
 
 # Install LangChain and LangGraph
 pip install "langchain-core>=1.0.0,<2.0.0" "langchain>=0.3.0,<2.0.0"

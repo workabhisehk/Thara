@@ -9,7 +9,7 @@ echo "=========================================="
 
 # Step 1: Core dependencies first
 echo "📦 Step 1: Installing core dependencies..."
-pip install fastapi==0.104.1 uvicorn[standard]==0.24.0
+pip install fastapi==0.104.1 "uvicorn[standard]==0.24.0"
 pip install "pydantic>=2.7.4,<3.0.0" pydantic-settings==2.1.0
 
 # Step 2: Database dependencies
@@ -39,7 +39,7 @@ pip install llama-index-embeddings-openai==0.1.9 || echo "⚠️  LlamaIndex emb
 
 # Step 6: Telegram bot
 echo "📦 Step 6: Installing Telegram bot..."
-pip install python-telegram-bot==20.7 python-telegram-bot[job-queue]==20.7
+pip install python-telegram-bot==20.7 "python-telegram-bot[job-queue]==20.7"
 
 # Step 7: Google Calendar
 echo "📦 Step 7: Installing Google Calendar API..."
@@ -54,7 +54,7 @@ pip install pytz==2023.3 python-dateutil==2.8.2
 
 # Step 9: Error tracking
 echo "📦 Step 9: Installing error tracking..."
-pip install "sentry-sdk[fastapi]==1.40.0"
+pip install 'sentry-sdk[fastapi]==1.40.0'
 
 # Step 10: Development tools
 echo "📦 Step 10: Installing development tools..."
