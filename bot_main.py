@@ -51,6 +51,17 @@ if settings.sentry_dsn and settings.sentry_enabled:
         )
         logging.getLogger(__name__).info("✅ Sentry initialized for error tracking")
 
+# Configure logging with detailed output (before dependency checks to allow logging)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG,  # Force DEBUG level to see all errors
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('bot.log', mode='w', encoding='utf-8')
+    ]
+)
+logger = logging.getLogger(__name__)
+
 # Check for required dependencies before proceeding
 try:
     import greenlet
@@ -70,17 +81,6 @@ try:
 except ImportError as e:
     logger.error(f"❌ FATAL: SQLAlchemy async support not available: {e}")
     sys.exit(1)
-
-# Configure logging with detailed output
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG,  # Force DEBUG level to see all errors
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('bot.log', mode='w', encoding='utf-8')
-    ]
-)
-logger = logging.getLogger(__name__)
 # Reduce noise from some verbose libraries
 logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('httpcore').setLevel(logging.WARNING)
