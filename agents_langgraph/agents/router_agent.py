@@ -6,8 +6,15 @@ import logging
 from typing import Literal
 from langgraph.types import Command
 from agents_langgraph.state import AgentState
-from ai.intent_extraction import extract_intent
-from ai.conversation_understanding import understand_conversation
+# Import AI modules (handle missing dependencies gracefully)
+try:
+    from ai.intent_extraction import extract_intent
+    from ai.conversation_understanding import understand_conversation
+except ImportError as e:
+    # LlamaIndex or other dependencies may not be installed yet
+    logger.warning(f"AI modules not available: {e}. Some features may not work.")
+    extract_intent = None
+    understand_conversation = None
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +66,23 @@ async def router_agent(state: AgentState) -> Command[Literal["onboarding_agent",
             )
         
         # Use AI to understand intent
+        if understand_conversation is None:
+            logger.warning("Conversation understanding not available, using basic routing")
+            # Fallback: basic routing based on keywords
+            message_lower = last_message.lower()
+            if any(word in message_lower for word in ["task", "todo", "add task", "create task"]):
+                return Command(
+                    goto="task_agent",
+                    update={"intent": "add_task", "active_agent": "task_agent", "confidence": 0.6}
+                )
+            elif any(word in message_lower for word in ["calendar", "schedule", "meeting"]):
+                return Command(
+                    goto="calendar_agent",
+                    update={"intent": "calendar_query", "active_agent": "calendar_agent", "confidence": 0.6}
+                )
+            else:
+                return Command(goto="__end__", update={"intent": "general_chat"})
+        
         from database.connection import AsyncSessionLocal
         async with AsyncSessionLocal() as session:
             try:
