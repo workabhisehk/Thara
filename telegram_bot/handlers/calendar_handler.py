@@ -153,12 +153,32 @@ async def calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                     "Please try again or check your Google Calendar connection."
                 )
                 
+    except ImportError as e:
+        if "greenlet" in str(e).lower():
+            logger.error(f"Greenlet error in calendar_command: {e}", exc_info=True)
+            await update.message.reply_text(
+                "⚠️ Error: Missing dependency (greenlet). "
+                "Please contact support or check your installation."
+            )
+        else:
+            logger.error(f"Import error in calendar_command: {e}", exc_info=True)
+            await update.message.reply_text(
+                "❌ An error occurred while fetching your calendar. "
+                "Please try again or use /help."
+            )
     except Exception as e:
         logger.error(f"Error in calendar_command: {e}", exc_info=True)
-        await update.message.reply_text(
-            "❌ An error occurred while fetching your calendar. "
-            "Please try again or use /help."
-        )
+        error_msg = str(e).lower()
+        if "greenlet" in error_msg:
+            await update.message.reply_text(
+                "⚠️ Error: Missing dependency (greenlet). "
+                "Please contact support or check your installation."
+            )
+        else:
+            await update.message.reply_text(
+                "❌ An error occurred while fetching your calendar. "
+                "Please try again or use /help."
+            )
 
 
 async def sync_calendar_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

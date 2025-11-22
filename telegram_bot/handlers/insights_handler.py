@@ -154,12 +154,38 @@ async def insights_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                     parse_mode="Markdown"
                 )
                 
+    except ImportError as e:
+        if "greenlet" in str(e).lower() or "llama_index" in str(e).lower():
+            logger.error(f"Missing dependency in insights_command: {e}", exc_info=True)
+            missing = "greenlet" if "greenlet" in str(e).lower() else "llama_index"
+            await update.message.reply_text(
+                f"⚠️ Error: Missing dependency ({missing}). "
+                "Please contact support or check your installation."
+            )
+        else:
+            logger.error(f"Import error in insights_command: {e}", exc_info=True)
+            await update.message.reply_text(
+                "❌ An error occurred while fetching insights. "
+                "Please try again or use /help."
+            )
     except Exception as e:
         logger.error(f"Error in insights_command: {e}", exc_info=True)
-        await update.message.reply_text(
-            "❌ An error occurred while fetching insights. "
-            "Please try again or use /help."
-        )
+        error_msg = str(e).lower()
+        if "greenlet" in error_msg:
+            await update.message.reply_text(
+                "⚠️ Error: Missing dependency (greenlet). "
+                "Please contact support or check your installation."
+            )
+        elif "llama_index" in error_msg or "llama_index" in error_msg:
+            await update.message.reply_text(
+                "⚠️ Error: Missing dependency (llama_index). "
+                "Insights feature requires llama_index. Please install it or contact support."
+            )
+        else:
+            await update.message.reply_text(
+                "❌ An error occurred while fetching insights. "
+                "Please try again or use /help."
+            )
 
 
 async def notify_pattern_detected(
