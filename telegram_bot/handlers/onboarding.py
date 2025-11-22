@@ -286,11 +286,6 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
             )
         except Exception:
             pass  # Failed to send message
-                await update.message.reply_text(
-                    "I'm **Thara**! 😊 I understand you're trying to tell me something.\n\n"
-                    "You can use the buttons below, or just tell me naturally what you need - I'll understand!\n\n"
-                    "Or type /start to restart onboarding if you'd like."
-                )
 
 
 async def show_pillar_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, 
