@@ -51,6 +51,26 @@ if settings.sentry_dsn and settings.sentry_enabled:
         )
         logging.getLogger(__name__).info("✅ Sentry initialized for error tracking")
 
+# Check for required dependencies before proceeding
+try:
+    import greenlet
+    logger.info(f"✅ greenlet library found (version: {getattr(greenlet, '__version__', 'unknown')})")
+except ImportError:
+    logger.error("=" * 80)
+    logger.error("❌ FATAL: greenlet library is required but not installed!")
+    logger.error("   Please run: pip install greenlet")
+    logger.error("   Then restart the bot.")
+    logger.error("=" * 80)
+    sys.exit(1)
+
+# Check SQLAlchemy async support
+try:
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    logger.info("✅ SQLAlchemy async support available")
+except ImportError as e:
+    logger.error(f"❌ FATAL: SQLAlchemy async support not available: {e}")
+    sys.exit(1)
+
 # Configure logging with detailed output
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
