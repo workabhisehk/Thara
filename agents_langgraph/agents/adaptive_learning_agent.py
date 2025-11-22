@@ -11,7 +11,7 @@ from agents_langgraph.state import AgentState
 logger = logging.getLogger(__name__)
 
 
-async def adaptive_learning_agent(state: AgentState) -> Command[Literal["adaptive_learning_agent", "router_agent", "human", "__end__"]]:
+async def adaptive_learning_agent(state: AgentState) -> Command[Literal["adaptive_learning_agent", "router", "human", "__end__"]]:
     """
     Adaptive Learning agent - handles insights and learning features.
     
@@ -24,7 +24,7 @@ async def adaptive_learning_agent(state: AgentState) -> Command[Literal["adaptiv
     - Analytics and reports
     
     Can handoff to:
-    - router_agent: General query or redirect
+    - router: General query or redirect
     - human: Needs clarification
     - __end__: Complete learning operation
     """

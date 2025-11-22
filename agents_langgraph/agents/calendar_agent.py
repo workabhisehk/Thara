@@ -12,7 +12,7 @@ from telegram_bot.conversation import ConversationState
 logger = logging.getLogger(__name__)
 
 
-async def calendar_agent(state: AgentState) -> Command[Literal["calendar_agent", "task_agent", "router_agent", "human", "__end__"]]:
+async def calendar_agent(state: AgentState) -> Command[Literal["calendar_agent", "task_agent", "router", "human", "__end__"]]:
     """
     Calendar agent - handles all calendar and scheduling operations.
     
@@ -26,7 +26,7 @@ async def calendar_agent(state: AgentState) -> Command[Literal["calendar_agent",
     
     Can handoff to:
     - task_agent: After scheduling, return to task context
-    - router_agent: General calendar query
+    - router: General calendar query
     - human: Needs clarification or user input
     - __end__: Complete calendar operation
     """

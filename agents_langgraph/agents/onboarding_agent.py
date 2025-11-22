@@ -12,7 +12,7 @@ from telegram_bot.conversation import ConversationState
 logger = logging.getLogger(__name__)
 
 
-async def onboarding_agent(state: AgentState) -> Command[Literal["onboarding_agent", "router_agent", "human", "__end__"]]:
+async def onboarding_agent(state: AgentState) -> Command[Literal["onboarding_agent", "router", "human", "__end__"]]:
     """
     Onboarding agent - handles all onboarding-related interactions.
     
@@ -26,7 +26,7 @@ async def onboarding_agent(state: AgentState) -> Command[Literal["onboarding_age
     - Mood tracking setup
     
     Can handoff to:
-    - router_agent: Onboarding complete, return to normal flow
+    - router: Onboarding complete, return to normal flow
     - human: Needs user input or clarification
     - __end__: Complete onboarding response
     """

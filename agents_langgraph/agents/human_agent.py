@@ -13,7 +13,7 @@ from agents_langgraph.state import AgentState
 logger = logging.getLogger(__name__)
 
 
-async def human_agent(state: AgentState) -> Command[Literal["router_agent", "human", "__end__"]]:
+async def human_agent(state: AgentState) -> Command[Literal["router", "human", "__end__"]]:
     """
     Human agent - handles clarification and user input collection.
     
@@ -23,7 +23,7 @@ async def human_agent(state: AgentState) -> Command[Literal["router_agent", "hum
     - Guide users through complex flows
     
     Can handoff to:
-    - router_agent: After clarification, re-route to appropriate agent
+    - router: After clarification, re-route to appropriate agent
     - __end__: Complete clarification response
     """
     try:
