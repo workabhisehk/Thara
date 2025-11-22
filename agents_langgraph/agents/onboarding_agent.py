@@ -78,9 +78,9 @@ async def onboarding_agent(state: AgentState) -> Command[Literal["onboarding_age
             if db_user.is_onboarded and current_state == ConversationState.NORMAL:
                 logger.info(f"OnboardingAgent: User {user_id} already onboarded, routing to normal flow")
                 return Command(
-                    goto="router_agent",
+                    goto="router",
                     update={
-                        "active_agent": "router_agent",
+                        "active_agent": "router",
                         "current_state": ConversationState.NORMAL
                     }
                 )
@@ -111,9 +111,9 @@ async def onboarding_agent(state: AgentState) -> Command[Literal["onboarding_age
             if db_user.is_onboarded:
                 logger.info(f"OnboardingAgent: User {user_id} onboarding complete")
                 return Command(
-                    goto="router_agent",
+                    goto="router",
                     update={
-                        "active_agent": "router_agent",
+                        "active_agent": "router",
                         "current_state": ConversationState.NORMAL,
                         "context": {
                             **state.get("context", {}),
