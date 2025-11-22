@@ -32,14 +32,37 @@ def should_continue_after_router(state: AgentState) -> str:
     """
     Determine next node after router.
     Router agent returns Command with goto, but we need to check state.
+    Maps agent names to node names.
     """
     handoff_to = state.get("handoff_to")
-    if handoff_to and handoff_to != "__end__":
-        return handoff_to
+    if handoff_to:
+        if handoff_to == "__end__":
+            return END
+        # Map agent names to node names
+        agent_to_node = {
+            "onboarding_agent": "onboarding_agent",
+            "task_agent": "task_agent",
+            "calendar_agent": "calendar_agent",
+            "adaptive_learning_agent": "adaptive_learning_agent",
+            "human": "human",
+            "router_agent": "router",  # Map router_agent to router node
+        }
+        return agent_to_node.get(handoff_to, handoff_to)
     
     active_agent = state.get("active_agent")
-    if active_agent and active_agent != "__end__":
-        return active_agent
+    if active_agent:
+        if active_agent == "__end__":
+            return END
+        # Map agent names to node names
+        agent_to_node = {
+            "onboarding_agent": "onboarding_agent",
+            "task_agent": "task_agent",
+            "calendar_agent": "calendar_agent",
+            "adaptive_learning_agent": "adaptive_learning_agent",
+            "human": "human",
+            "router_agent": "router",  # Map router_agent to router node
+        }
+        return agent_to_node.get(active_agent, active_agent)
     
     # Default to end if no routing specified
     return END
@@ -104,7 +127,7 @@ def build_graph() -> StateGraph:
         "onboarding_agent",
         should_continue_after_agent,
         {
-            "router": "router",
+            "router": "router",  # Return to router for re-routing
             "task_agent": "task_agent",
             "calendar_agent": "calendar_agent",
             "human": "human",
@@ -117,7 +140,7 @@ def build_graph() -> StateGraph:
         should_continue_after_agent,
         {
             "calendar_agent": "calendar_agent",
-            "router": "router",
+            "router": "router",  # Return to router for re-routing
             "human": "human",
             END: END,
         }
@@ -128,7 +151,7 @@ def build_graph() -> StateGraph:
         should_continue_after_agent,
         {
             "task_agent": "task_agent",
-            "router": "router",
+            "router": "router",  # Return to router for re-routing
             "human": "human",
             END: END,
         }
@@ -138,7 +161,7 @@ def build_graph() -> StateGraph:
         "adaptive_learning_agent",
         should_continue_after_agent,
         {
-            "router": "router",
+            "router": "router",  # Return to router for re-routing
             "human": "human",
             END: END,
         }
@@ -148,7 +171,7 @@ def build_graph() -> StateGraph:
         "human",
         should_continue_after_agent,
         {
-            "router": "router",
+            "router": "router",  # Return to router for re-routing
             END: END,
         }
     )
