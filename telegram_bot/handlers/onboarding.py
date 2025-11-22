@@ -194,51 +194,98 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
     Handle messages during onboarding flow.
     Routes to appropriate handler based on current state.
     """
-    user = update.effective_user
-    text = update.message.text if update.message else ""
-    state = get_conversation_state(user.id)
-    conv_context = get_conversation_context(user.id)
-    
-    logger.info(f"Onboarding message from user {user.id}, state: {state}, text: {text[:50]}")
-    
-    async with AsyncSessionLocal() as session:
-        # Get user from database
-        stmt = select(User).where(User.telegram_id == user.id)
-        result = await session.execute(stmt)
-        db_user = result.scalar_one_or_none()
+    try:
+        user = update.effective_user
+        text = update.message.text if update.message else ""
         
-        if not db_user:
-            await update.message.reply_text("Please start with /start first.")
+        if not text:
+            await update.message.reply_text(
+                "👋 Hi! I'm **Thara**, your productivity assistant.\n\n"
+                "Please send a text message, or use /start to begin onboarding."
+            )
             return
         
-        # Route based on state
-        if state == ConversationState.ONBOARDING_PILLARS:
-            await handle_pillar_selection_text(update, context, session, db_user)
-        elif state == ConversationState.ONBOARDING_CUSTOM_PILLAR:
-            await handle_custom_pillar_input(update, context, session, db_user)
-        elif state == ConversationState.ONBOARDING_WORK_HOURS:
-            await handle_work_hours_input(update, context, session, db_user)
-        elif state == ConversationState.ONBOARDING_TIMEZONE:
-            await handle_timezone_input(update, context, session, db_user)
-        elif state == ConversationState.ONBOARDING_TASKS:
-            # Initial tasks setup - can be handled later
-            await handle_initial_tasks_input(update, context, session, db_user)
-        elif state == ConversationState.ONBOARDING:
-            # Default to pillar selection
-            set_conversation_state(user.id, ConversationState.ONBOARDING_PILLARS)
-            await show_pillar_selection(update, context, session, db_user)
-        else:
-            # Use AI to understand what user is saying
-            from ai.onboarding_parser import parse_onboarding_message
-            parsed = await parse_onboarding_message(text, current_step=str(state))
-            
-            # If user mentioned pillars, handle it
-            if parsed.get("pillars") and parsed.get("response_type") == "pillars":
-                await handle_pillar_selection_text(update, context, session, db_user)
-            elif parsed.get("response_type") == "work_hours" and parsed.get("work_hours"):
-                await handle_work_hours_input(update, context, session, db_user)
-            else:
-                # Generate friendly response
+        state = get_conversation_state(user.id)
+        conv_context = get_conversation_context(user.id)
+        
+        logger.info(f"Onboarding message from user {user.id}, state: {state}, text: {text[:50]}")
+        
+        async with AsyncSessionLocal() as session:
+            try:
+                # Get user from database
+                stmt = select(User).where(User.telegram_id == user.id)
+                result = await session.execute(stmt)
+                db_user = result.scalar_one_or_none()
+                
+                if not db_user:
+                    await update.message.reply_text(
+                        "👋 Welcome! Please start with /start to begin onboarding."
+                    )
+                    return
+                
+                # Route based on state
+                if state == ConversationState.ONBOARDING_PILLARS:
+                    await handle_pillar_selection_text(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING_CUSTOM_PILLAR:
+                    await handle_custom_pillar_input(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING_WORK_HOURS:
+                    await handle_work_hours_input(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING_TIMEZONE:
+                    await handle_timezone_input(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING_TASKS:
+                    await handle_initial_tasks_input(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING:
+                    # Default to pillar selection
+                    set_conversation_state(user.id, ConversationState.ONBOARDING_PILLARS)
+                    await show_pillar_selection(update, context, session, db_user)
+                else:
+                    # Use AI to understand what user is saying
+                    from ai.onboarding_parser import parse_onboarding_message
+                    
+                    try:
+                        parsed = await parse_onboarding_message(text, current_step=str(state))
+                        
+                        # If user mentioned pillars, handle it
+                        if parsed.get("pillars") and parsed.get("response_type") == "pillars":
+                            await handle_pillar_selection_text(update, context, session, db_user)
+                        elif parsed.get("response_type") == "work_hours" and parsed.get("work_hours"):
+                            await handle_work_hours_input(update, context, session, db_user)
+                        else:
+                            # Generate friendly response - AI couldn't parse, guide user
+                            logger.warning(f"AI parsing failed for state {state}, text: '{text[:50]}'")
+                            await update.message.reply_text(
+                                f"I understand you said: '{text[:100]}'\n\n"
+                                "I'm here to help you complete onboarding. Could you tell me:\n"
+                                "• Which categories (pillars) you want to track?\n"
+                                "• Your work hours?\n"
+                                "• Your timezone?\n\n"
+                                "Or use /start to restart the onboarding process."
+                            )
+                    except Exception as ai_error:
+                        logger.error(f"Error in AI parsing during onboarding: {ai_error}", exc_info=True)
+                        await update.message.reply_text(
+                            f"I received your message: '{text[:100]}'\n\n"
+                            "I'm having trouble processing that right now. "
+                            "Could you try rephrasing, or use /start to restart onboarding?"
+                        )
+                        
+            except Exception as handler_error:
+                logger.error(f"Error in onboarding handler for state {state}: {handler_error}", exc_info=True)
+                await update.message.reply_text(
+                    "⚠️ I encountered an error processing your response.\n\n"
+                    "Please try again or use /start to restart onboarding.\n\n"
+                    "If this persists, check the bot logs."
+                )
+                
+    except Exception as e:
+        logger.error(f"Fatal error in handle_onboarding_message: {e}", exc_info=True)
+        try:
+            await update.message.reply_text(
+                "👋 I encountered an unexpected error.\n\n"
+                "Please try /start to restart, or send your message again."
+            )
+        except Exception:
+            pass  # Failed to send message
                 await update.message.reply_text(
                     "I'm **Thara**! 😊 I understand you're trying to tell me something.\n\n"
                     "You can use the buttons below, or just tell me naturally what you need - I'll understand!\n\n"
@@ -446,8 +493,23 @@ async def handle_work_hours_input(update: Update, context: ContextTypes.DEFAULT_
             start_normalized = f"{start_hour:02d}:00"
             end_normalized = f"{end_hour:02d}:00"
     
-    if start_normalized and end_normalized:
-        # Extract hour from time string
+    if not start_normalized or not end_normalized:
+        # AI parsing failed, provide helpful error
+        logger.warning(f"Failed to parse work hours from: '{text}' (AI confidence: {parsed.get('confidence', 0)})")
+        await update.message.reply_text(
+            "⚠️ I couldn't understand your work hours format. Let me help!\n\n"
+            "Please provide your work hours in one of these formats:\n"
+            "• '9 AM to 5 PM'\n"
+            "• '9:00 AM - 5:00 PM'\n"
+            "• 'Monday-Friday 9-5'\n"
+            "• '09:00-17:00' (24-hour format)\n\n"
+            "You can also describe complex schedules like:\n"
+            "'Monday, Wednesday, Friday from 9 AM to 4 PM, with 2 hours travel time'"
+        )
+        return
+    
+    # Extract hour from time string
+    try:
         start_hour = int(start_normalized.split(":")[0])
         end_hour = int(end_normalized.split(":")[0])
         
@@ -465,6 +527,13 @@ async def handle_work_hours_input(update: Update, context: ContextTypes.DEFAULT_
                 "Examples: '9 AM to 5 PM' or 'Monday-Friday 9-5'"
             )
             return
+    except (ValueError, IndexError) as e:
+        logger.error(f"Error parsing normalized times '{start_normalized}' / '{end_normalized}': {e}")
+        await update.message.reply_text(
+            "⚠️ I had trouble processing the times. Could you try a different format?\n\n"
+            "Examples: '9 AM to 5 PM' or '09:00-17:00'"
+        )
+        return
         
         # Store work hours
         db_user.work_start_hour = start_hour

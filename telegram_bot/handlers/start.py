@@ -170,14 +170,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             logger.error(f"Failed to send error message: {send_error}")
 
 
-async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle messages during onboarding."""
-    # This will be expanded with full onboarding flow
-    await update.message.reply_text(
-        "I'm processing your onboarding. Please use the buttons provided or /start to restart."
-    )
-
-
 async def handle_natural_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle natural language with AI - conversational understanding throughout."""
     try:
