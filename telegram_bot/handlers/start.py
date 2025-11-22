@@ -282,28 +282,83 @@ async def handle_natural_language(update: Update, context: ContextTypes.DEFAULT_
                         )
                         await update.message.reply_text(response_text)
                         
+        except ImportError as ai_error:
+            error_msg = str(ai_error).lower()
+            if "greenlet" in error_msg:
+                logger.error(f"❌ Greenlet error in AI processing: {ai_error}", exc_info=True)
+                try:
+                    await update.message.reply_text(
+                        "⚠️ Error: Missing dependency (greenlet). "
+                        "Please contact support or check your installation."
+                    )
+                except Exception:
+                    pass
+            else:
+                logger.error(f"❌ Import error in AI processing: {ai_error}", exc_info=True)
+                try:
+                    await update.message.reply_text(
+                        f"Hi! I'm **Thara**. I understand you said: '{text[:100]}'\n\n"
+                        "I'm working on understanding that better. "
+                        "You can tell me naturally what you need, or use commands like /tasks, /calendar, or /help.\n\n"
+                        "Just chat with me - I'll understand! 😊"
+                    )
+                except Exception:
+                    pass
         except Exception as ai_error:
             logger.error(f"❌ Error in AI processing: {ai_error}", exc_info=True)
             # Fallback: friendly conversational response
+            error_msg = str(ai_error).lower()
+            if "greenlet" in error_msg:
+                try:
+                    await update.message.reply_text(
+                        "⚠️ Error: Missing dependency (greenlet). "
+                        "Please contact support or check your installation."
+                    )
+                except Exception:
+                    pass
+            else:
+                try:
+                    await update.message.reply_text(
+                        f"Hi! I'm **Thara**. I understand you said: '{text[:100]}'\n\n"
+                        "I'm working on understanding that better. "
+                        "You can tell me naturally what you need, or use commands like /tasks, /calendar, or /help.\n\n"
+                        "Just chat with me - I'll understand! 😊"
+                    )
+                except Exception:
+                    pass  # Failed to send message
+            
+    except ImportError as e:
+        error_msg = str(e).lower()
+        if "greenlet" in error_msg:
+            logger.error(f"❌ Greenlet error in handle_natural_language: {e}", exc_info=True)
             try:
                 await update.message.reply_text(
-                    f"Hi! I'm **Thara**. I understand you said: '{text[:100]}'\n\n"
-                    "I'm working on understanding that better. "
-                    "You can tell me naturally what you need, or use commands like /tasks, /calendar, or /help.\n\n"
-                    "Just chat with me - I'll understand! 😊"
+                    "⚠️ Error: Missing dependency (greenlet). "
+                    "Please contact support or check your installation."
                 )
             except Exception:
-                pass  # Failed to send message
-            
+                pass
+        else:
+            logger.error(f"❌ Import error in handle_natural_language: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"❌ Fatal error in handle_natural_language: {e}", exc_info=True)
         # Ensure we always send a response
-        try:
-            await update.message.reply_text(
-                f"👋 I received your message but encountered an error.\n\n"
-                "Please try /help or send your message again.\n\n"
-                "If this persists, check the bot logs."
-            )
-        except Exception as send_error:
-            logger.error(f"❌ Failed to send error response: {send_error}", exc_info=True)
+        error_msg = str(e).lower()
+        if "greenlet" in error_msg:
+            try:
+                await update.message.reply_text(
+                    "⚠️ Error: Missing dependency (greenlet). "
+                    "Please contact support or check your installation."
+                )
+            except Exception:
+                pass
+        else:
+            try:
+                await update.message.reply_text(
+                    f"👋 I received your message but encountered an error.\n\n"
+                    "Please try /help or send your message again.\n\n"
+                    "If this persists, check the bot logs."
+                )
+            except Exception as send_error:
+                logger.error(f"❌ Failed to send error response: {send_error}", exc_info=True)
 

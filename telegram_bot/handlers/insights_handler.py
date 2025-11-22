@@ -9,12 +9,29 @@ from telegram.ext import ContextTypes
 from database.connection import AsyncSessionLocal
 from database.models import User
 from sqlalchemy import select
-from memory.adaptive_learning import (
-    detect_recurring_patterns,
-    suggest_automatic_flow,
-    adapt_behavior_from_patterns
-)
-from memory.pattern_learning import get_user_habits
+
+# Make memory imports optional - insights can work without llama_index
+try:
+    from memory.adaptive_learning import (
+        detect_recurring_patterns,
+        suggest_automatic_flow,
+        adapt_behavior_from_patterns
+    )
+    from memory.pattern_learning import get_user_habits
+    MEMORY_AVAILABLE = True
+except ImportError as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Memory modules not available (insights will be limited): {e}")
+    MEMORY_AVAILABLE = False
+    # Define stubs for when memory is not available
+    async def detect_recurring_patterns(*args, **kwargs):
+        return []
+    async def suggest_automatic_flow(*args, **kwargs):
+        return None
+    async def adapt_behavior_from_patterns(*args, **kwargs):
+        return {}
+    async def get_user_habits(*args, **kwargs):
+        return []
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +50,21 @@ async def insights_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             if not db_user:
                 await update.message.reply_text(
                     "❌ Please use /start first to set up your account."
+                )
+                return
+            
+            # Check if memory modules are available
+            if not MEMORY_AVAILABLE:
+                await update.message.reply_text(
+                    "⚠️ **Insights Feature Unavailable**\n\n"
+                    "The insights feature requires additional dependencies (llama_index).\n\n"
+                    "To enable insights:\n"
+                    "• Install llama_index: `pip install llama-index==0.10.57`\n"
+                    "• Or use the bot without insights - all other features work fine!\n\n"
+                    "For now, you can use:\n"
+                    "• `/tasks` - View and manage tasks\n"
+                    "• `/calendar` - View calendar events\n"
+                    "• `/help` - See all available commands"
                 )
                 return
             
