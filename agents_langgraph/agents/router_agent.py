@@ -6,6 +6,8 @@ import logging
 from typing import Literal
 from langgraph.types import Command
 from agents_langgraph.state import AgentState
+logger = logging.getLogger(__name__)
+
 # Import AI modules (handle missing dependencies gracefully)
 try:
     from ai.intent_extraction import extract_intent
@@ -15,8 +17,6 @@ except ImportError as e:
     logger.warning(f"AI modules not available: {e}. Some features may not work.")
     extract_intent = None
     understand_conversation = None
-
-logger = logging.getLogger(__name__)
 
 
 async def router_agent(state: AgentState) -> Command[Literal["onboarding_agent", "task_agent", "calendar_agent", "adaptive_learning_agent", "human", "__end__"]]:
