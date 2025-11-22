@@ -83,24 +83,44 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         error_category = "llm_error"
     elif "calendar" in str(error).lower():
         error_category = "calendar_error"
+    elif "greenlet" in str(error).lower():
+        error_category = "dependency_error"
     
-    # Format user-friendly error message following agent persona
-    user_message = format_user_friendly_error(
-        error_category,
-        str(error),
-        error_context
-    )
+    # Handle greenlet/dependency errors specifically
+    error_str = str(error).lower()
+    is_greenlet_error = "greenlet" in error_str or isinstance(error, ImportError) and "greenlet" in error_str
     
-    # Admit mistake and provide next steps (agent persona - Error Handling guardrails)
-    user_message = (
-        f"I encountered an error while processing your request. "
-        f"{user_message}\n\n"
-        f"**What you can do:**\n"
-        f"- Try again in a moment\n"
-        f"- Use /help to see available commands\n"
-        f"- If the problem persists, please let me know"
-    )
+    if is_greenlet_error:
+        # Greenlet error - provide specific message
+        user_message = (
+            "⚠️ **Error: Missing Dependency**\n\n"
+            "The bot requires the 'greenlet' library to function properly.\n\n"
+            "**This is a system configuration issue.**\n\n"
+            "The bot administrator needs to:\n"
+            "1. Install greenlet: `pip install greenlet`\n"
+            "2. Restart the bot\n\n"
+            "Please contact support if this issue persists."
+        )
+        # Don't format with generic error handler for dependency errors
+    else:
+        # Format user-friendly error message following agent persona
+        user_message = format_user_friendly_error(
+            error_category,
+            str(error),
+            error_context
+        )
+        
+        # Admit mistake and provide next steps (agent persona - Error Handling guardrails)
+        user_message = (
+            f"I encountered an error while processing your request. "
+            f"{user_message}\n\n"
+            f"**What you can do:**\n"
+            f"- Try again in a moment\n"
+            f"- Use /help to see available commands\n"
+            f"- If the problem persists, please let me know"
+        )
     
+    # Send error message (handlers should suppress their own messages for ImportError)
     if update and update.effective_message:
         try:
             await update.effective_message.reply_text(user_message, parse_mode="Markdown")

@@ -65,30 +65,22 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
                 await handle_tell_me_more(update, context, session, db_user)
             else:
                 await query.message.edit_text(f"Unknown callback: {callback_data}")
-    except ImportError as e:
+    except (ImportError, RuntimeError) as e:
         error_msg = str(e).lower()
         if "greenlet" in error_msg:
             logger.error(f"Greenlet error in handle_onboarding_callbacks: {e}", exc_info=True)
-            try:
-                await query.message.reply_text(
-                    "⚠️ Error: Missing dependency (greenlet). "
-                    "Please contact support or check your installation."
-                )
-            except Exception:
-                pass
+            # Don't send message here - let global error handler handle it
+            # Re-raise so global error handler can send a proper message
+            raise
         else:
             raise
     except Exception as e:
         logger.error(f"Error in handle_onboarding_callbacks: {e}", exc_info=True)
         error_msg = str(e).lower()
         if "greenlet" in error_msg:
-            try:
-                await query.message.reply_text(
-                    "⚠️ Error: Missing dependency (greenlet). "
-                    "Please contact support or check your installation."
-                )
-            except Exception:
-                pass
+            # Don't send message here - let global error handler handle it
+            # Re-raise so global error handler can send a proper message
+            raise
         else:
             # Re-raise to trigger global error handler
             raise

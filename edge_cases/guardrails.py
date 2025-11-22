@@ -219,6 +219,10 @@ def format_user_friendly_error(
             "I'm having trouble accessing the database right now. "
             "Please try again in a moment. If the problem persists, let me know."
         ),
+        "dependency_error": (
+            "A required system dependency is missing. "
+            "Please contact support or check your installation."
+        ),
         "llm_error": (
             "I'm having trouble processing your request with AI right now. "
             "Please try again, or use a command like /tasks to continue."
