@@ -8,15 +8,31 @@ from datetime import datetime
 
 
 class ConversationState(str, Enum):
-    """Conversation states."""
+    """Conversation states according to COMPREHENSIVE_PLAN.md."""
     IDLE = "idle"
+    NORMAL = "normal"
+    
+    # Onboarding states
     ONBOARDING = "onboarding"
     ONBOARDING_PILLARS = "onboarding_pillars"
+    ONBOARDING_CUSTOM_PILLAR = "onboarding_custom_pillar"
     ONBOARDING_WORK_HOURS = "onboarding_work_hours"
-    ONBOARDING_TASKS = "onboarding_tasks"
+    ONBOARDING_TIMEZONE = "onboarding_timezone"
+    ONBOARDING_INITIAL_TASKS = "onboarding_initial_tasks"
+    ONBOARDING_HABITS = "onboarding_habits"
+    ONBOARDING_MOOD_TRACKING = "onboarding_mood_tracking"
     ONBOARDING_CALENDAR = "onboarding_calendar"
+    
+    # Task management states
     ADDING_TASK = "adding_task"
+    ADDING_TASK_PILLAR = "adding_task_pillar"
+    ADDING_TASK_PRIORITY = "adding_task_priority"
+    ADDING_TASK_DUE_DATE = "adding_task_due_date"
+    ADDING_TASK_DURATION = "adding_task_duration"
+    EDITING_TASK = "editing_task"
     SCHEDULING_TASK = "scheduling_task"
+    
+    # Other states
     CLARIFYING = "clarifying"
     SETTINGS = "settings"
 

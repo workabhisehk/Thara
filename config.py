@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     log_level: str = Field("INFO", env="LOG_LEVEL")
     timezone: str = Field("UTC", env="TIMEZONE")
     
+    # Sentry Error Tracking (Optional)
+    sentry_dsn: Optional[str] = Field(None, env="SENTRY_DSN")
+    sentry_enabled: bool = Field(True, env="SENTRY_ENABLED")  # Enable by default if DSN is set
+    
     # Default Work Hours
     default_work_start_hour: int = Field(8, env="DEFAULT_WORK_START_HOUR")
     default_work_end_hour: int = Field(20, env="DEFAULT_WORK_END_HOUR")

@@ -1,12 +1,10 @@
 """
 LangChain setup for AI agent.
+Updated for LangChain v0.3+ (Pydantic v2 compatible).
 """
 import logging
-from langchain.memory import ConversationSummaryMemory, ConversationBufferMemory
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import AgentExecutor, create_openai_tools_agent
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -49,20 +47,7 @@ def get_fallback_llm():
     return fallback_llm
 
 
-def get_memory():
-    """Get conversation memory."""
-    # Use summary memory for long-term context
-    return ConversationSummaryMemory(
-        llm=get_llm(),
-        return_messages=True,
-        memory_key="chat_history"
-    )
-
-
-def get_buffer_memory():
-    """Get buffer memory for recent context."""
-    return ConversationBufferMemory(
-        return_messages=True,
-        memory_key="chat_history"
-    )
+# Note: Memory functionality replaced with database-based storage
+# We use the conversation store in database instead of LangChain memory
+# This avoids dependency issues and gives us more control
 

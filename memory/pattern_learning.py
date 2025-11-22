@@ -31,10 +31,13 @@ async def analyze_task_completion_patterns(
     cutoff_date = datetime.utcnow() - timedelta(days=days)
     
     # Get completed tasks
+    from database.models import TaskStatus
     stmt = select(Task).where(
-        Task.user_id == user_id,
-        Task.status == "completed",
-        Task.completed_at >= cutoff_date
+        and_(
+            Task.user_id == user_id,
+            Task.status == TaskStatus.COMPLETED,
+            Task.completed_at >= cutoff_date
+        )
     )
     
     result = await session.execute(stmt)

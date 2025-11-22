@@ -9,12 +9,57 @@ from telegram import Update
 from telegram.ext import Application
 from config import settings
 
-# Configure logging
+# Initialize Sentry for error tracking (before any other imports that might error)
+if settings.sentry_dsn and settings.sentry_enabled:
+    import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    from sentry_sdk.integrations.asyncio import AsyncioIntegration
+    
+    # Configure Sentry
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        # Set traces_sample_rate to 1.0 to capture 100% of transactions for performance monitoring
+        traces_sample_rate=0.1,  # 10% of transactions for performance
+        # Enable profiling (optional, requires sentry-sdk[fastapi])
+        profiles_sample_rate=0.1,
+        # Set environment
+        environment=settings.environment,
+        # Integrations
+        integrations=[
+            LoggingIntegration(
+                level=logging.INFO,        # Capture info and above as breadcrumbs
+                event_level=logging.ERROR  # Send errors as events
+            ),
+            SqlalchemyIntegration(),
+            AsyncioIntegration(),
+        ],
+        # Release tracking (useful for deployments)
+        # release="bot@1.0.0",
+        # Filter out some noisy logs
+        ignore_errors=[
+            KeyboardInterrupt,
+            SystemExit,
+        ],
+        # Add user context to errors
+        before_send=lambda event, hint: event,
+    )
+    logging.getLogger(__name__).info("✅ Sentry initialized for error tracking")
+
+# Configure logging with detailed output
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=getattr(logging, settings.log_level.upper())
+    level=logging.DEBUG,  # Force DEBUG level to see all errors
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('bot.log', mode='w', encoding='utf-8')
+    ]
 )
 logger = logging.getLogger(__name__)
+# Reduce noise from some verbose libraries
+logging.getLogger('httpx').setLevel(logging.WARNING)
+logging.getLogger('httpcore').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 def validate_environment_on_startup():
@@ -47,8 +92,16 @@ def validate_environment_on_startup():
 async def post_init(application: Application) -> None:
     """Initialize bot after startup."""
     # Initialize scheduler
-    from scheduler.jobs import init_scheduler
-    await init_scheduler()
+    try:
+        from scheduler.jobs import init_scheduler
+        await init_scheduler()
+        logger.info("✅ Scheduler initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Could not initialize scheduler: {e}")
+        logger.error("Bot will continue without scheduled jobs (check-ins, reminders, etc.)")
+        logger.error("You can still use all bot commands manually")
+        import traceback
+        logger.error(traceback.format_exc())
     
     # Test opening message - "Hi" when bot starts
     logger.info("")
@@ -56,13 +109,51 @@ async def post_init(application: Application) -> None:
     logger.info("👋 Hi! Bot is running and ready!")
     logger.info("=" * 60)
     logger.info("Bot initialized and ready")
+    
+    # Send "Hi" message to all registered users (for testing)
+    try:
+        await send_startup_message(application)
+    except Exception as e:
+        logger.warning(f"Could not send startup messages: {e}")
+
+
+async def send_startup_message(application: Application) -> None:
+    """Send 'Hi' message to registered users when bot starts."""
+    from database.connection import AsyncSessionLocal
+    from database.models import User
+    from sqlalchemy import select
+    
+    async with AsyncSessionLocal() as session:
+        # Get all active users
+        stmt = select(User).where(User.is_active == True)
+        result = await session.execute(stmt)
+        users = result.scalars().all()
+        
+        if not users:
+            logger.info("No registered users yet. Send /start to the bot to get started!")
+            return
+        
+        logger.info(f"Sending startup 'Hi' message to {len(users)} registered user(s)...")
+        
+        for user in users:
+            try:
+                await application.bot.send_message(
+                    chat_id=user.telegram_id,
+                    text="👋 Hi! Bot is running and ready!"
+                )
+                logger.info(f"✅ Sent startup message to user {user.telegram_id} ({user.first_name})")
+            except Exception as e:
+                logger.warning(f"Could not send startup message to user {user.telegram_id}: {e}")
 
 
 async def post_shutdown(application: Application) -> None:
     """Cleanup on shutdown."""
-    # Shutdown scheduler
-    from scheduler.jobs import shutdown_scheduler
-    await shutdown_scheduler()
+    # Shutdown scheduler (if it was initialized)
+    try:
+        from scheduler.jobs import shutdown_scheduler
+        await shutdown_scheduler()
+    except Exception as e:
+        logger.warning(f"Could not shutdown scheduler: {e}")
     logger.info("Bot shutting down")
 
 
@@ -105,7 +196,16 @@ def main():
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
     except Exception as e:
-        logger.error(f"Fatal error starting bot: {e}", exc_info=True)
+        logger.error("=" * 80)
+        logger.error("❌ FATAL ERROR STARTING BOT")
+        logger.error("=" * 80)
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error message: {str(e)}")
+        logger.error("Full traceback:")
+        import traceback
+        logger.error(traceback.format_exc())
+        logger.error("=" * 80)
+        logger.error("Check the logs above for the exact error!")
         sys.exit(1)
 
 

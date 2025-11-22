@@ -32,12 +32,37 @@ def _init_engines():
         # Create async engine
         # Convert postgresql:// to postgresql+asyncpg:// for async support
         async_database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        
+        # Remove ALL query parameters (asyncpg doesn't support them in URL)
+        # Extract SSL requirement and convert to proper SSL parameter for asyncpg
+        from urllib.parse import urlparse, parse_qs, urlunparse
+        parsed = urlparse(async_database_url)
+        query_params = parse_qs(parsed.query)
+        
+        # Check if SSL is required before removing query params
+        ssl_required = False
+        if 'sslmode' in query_params:
+            ssl_mode = query_params['sslmode'][0] if query_params['sslmode'] else 'require'
+            # asyncpg requires SSL for secure connections
+            ssl_required = ssl_mode in ('require', 'prefer', 'allow', 'verify-ca', 'verify-full')
+        
+        # Remove ALL query parameters - asyncpg doesn't support any query params
+        # Reconstruct URL without any query parameters
+        async_database_url = urlunparse(parsed._replace(query=''))
+        
+        # Set SSL parameter for asyncpg (True = enable SSL)
+        connect_args = {}
+        if ssl_required:
+            # asyncpg uses ssl=True for SSL connections
+            connect_args['ssl'] = True
+        
         engine = create_async_engine(
             async_database_url,
             echo=settings.environment == "development",
             pool_pre_ping=True,
             pool_size=10,
-            max_overflow=20
+            max_overflow=20,
+            connect_args=connect_args
         )
 
         # Create async session factory
@@ -51,6 +76,7 @@ def _init_engines():
 
     if sync_engine is None:
         # Create sync engine for Alembic migrations
+        # psycopg2 supports sslmode, so we can use it directly
         sync_database_url = settings.database_url
         sync_engine = create_engine(
             sync_database_url,

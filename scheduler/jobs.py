@@ -91,6 +91,15 @@ async def init_scheduler():
         replace_existing=True
     )
     
+    # Recurring flows check - every 6 hours
+    from scheduler.recurring_flows import check_recurring_flows
+    scheduler.add_job(
+        check_recurring_flows,
+        trigger=IntervalTrigger(hours=6),
+        id='recurring_flows',
+        replace_existing=True
+    )
+    
     # Time-based reminders - every 30 minutes
     from scheduler.time_reminders import check_time_based_reminders
     scheduler.add_job(

@@ -10,6 +10,7 @@ from sqlalchemy import select, and_
 from ai.langchain_setup import get_llm
 from memory.pattern_learning import get_user_habits
 from memory.context_retrieval import get_context_for_ai
+from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,9 @@ Respond in JSON format:
     
     try:
         llm = get_llm()
-        response = llm.invoke(prompt)
+        # Convert string prompt to LangChain message format
+        messages = [HumanMessage(content=prompt)]
+        response = llm.invoke(messages)
         
         import json
         # Try to extract JSON from response

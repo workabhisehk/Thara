@@ -37,6 +37,20 @@ async def send_check_ins():
                 if not (user.work_start_hour <= hour < user.work_end_hour):
                     continue
                 
+                # Use adaptive check-in timing if available
+                from memory.adaptive_learning import adapt_behavior_from_patterns
+                adaptations = await adapt_behavior_from_patterns(session, user.id)
+                
+                # If we have learned a preferred check-in time, only send at that hour
+                if adaptations.get("check_in_timing"):
+                    preferred_hour = adaptations["check_in_timing"]["suggested_hour"]
+                    confidence = adaptations["check_in_timing"]["confidence"]
+                    
+                    # Only use adaptive timing if confidence is high enough
+                    if confidence >= 0.6 and hour != preferred_hour:
+                        # Skip this check-in if not at preferred time
+                        continue
+                
                 await send_user_check_in(session, user, application)
             except Exception as e:
                 logger.error(f"Error sending check-in to user {user.id}: {e}")

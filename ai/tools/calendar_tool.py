@@ -1,7 +1,8 @@
 """
 LangChain tool for calendar operations.
+Updated for LangChain v0.3+.
 """
-from langchain.tools import tool
+from langchain_core.tools import tool
 from google_calendar.client import list_events, create_event
 from database.connection import AsyncSessionLocal
 

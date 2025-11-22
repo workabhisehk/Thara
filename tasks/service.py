@@ -22,7 +22,7 @@ async def create_task(
     estimated_duration: Optional[int] = None
 ) -> Task:
     """
-    Create a new task.
+    Create a new task with validation.
     
     Args:
         session: Database session
@@ -36,22 +36,55 @@ async def create_task(
     
     Returns:
         Created Task object
+    
+    Raises:
+        ValueError: If validation fails
     """
-    # Parse pillar
+    # Validate title
+    from edge_cases.validation import validate_task_title
+    is_valid, error_msg = validate_task_title(title)
+    if not is_valid:
+        raise ValueError(error_msg)
+    
+    # Validate and parse pillar
     pillar_enum = PillarType.OTHER
     if pillar:
-        try:
-            pillar_enum = PillarType(pillar.lower())
-        except ValueError:
-            pillar_enum = PillarType.OTHER
+        from edge_cases.validation import validate_pillar_name
+        is_valid, error_msg = validate_pillar_name(pillar)
+        if not is_valid:
+            logger.warning(f"Invalid pillar '{pillar}': {error_msg}, defaulting to OTHER")
+        else:
+            try:
+                pillar_enum = PillarType(pillar.lower())
+            except ValueError:
+                pillar_enum = PillarType.OTHER
     
-    # Parse priority
+    # Validate and parse priority
     priority_enum = TaskPriority.MEDIUM
     if priority:
-        try:
-            priority_enum = TaskPriority(priority.lower())
-        except ValueError:
-            priority_enum = TaskPriority.MEDIUM
+        from edge_cases.validation import validate_priority
+        is_valid, error_msg, normalized_priority = validate_priority(priority)
+        if not is_valid:
+            logger.warning(f"Invalid priority '{priority}': {error_msg}, defaulting to MEDIUM")
+        else:
+            try:
+                priority_enum = TaskPriority(normalized_priority)
+            except ValueError:
+                priority_enum = TaskPriority.MEDIUM
+    
+    # Validate description length if provided
+    if description:
+        from edge_cases.validation import validate_message_length
+        is_valid, error_msg = validate_message_length(description, max_length=2000)
+        if not is_valid:
+            raise ValueError(error_msg)
+    
+    # Validate estimated duration if provided
+    if estimated_duration is not None:
+        if estimated_duration <= 0:
+            raise ValueError("Estimated duration must be greater than 0 minutes.")
+        if estimated_duration > 1440:  # 24 hours
+            raise ValueError("Estimated duration cannot exceed 24 hours (1440 minutes).")
     
     task = Task(
         user_id=user_id,

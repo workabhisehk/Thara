@@ -1,7 +1,8 @@
 """
 LangChain tool for task operations.
+Updated for LangChain v0.3+.
 """
-from langchain.tools import tool
+from langchain_core.tools import tool
 from tasks.service import get_tasks, create_task
 from database.connection import AsyncSessionLocal
 
