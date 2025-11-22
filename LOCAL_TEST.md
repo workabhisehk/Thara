@@ -19,12 +19,29 @@ venv\Scripts\activate  # Windows
 
 ### 2. Install/Update Dependencies
 
+**Option A: Use install script (Recommended)**
 ```bash
-# Install all dependencies including LangGraph
-pip install -r requirements.txt
+# Install dependencies in correct order
+bash scripts/install_dependencies.sh
 
 # Verify LangGraph is installed
 pip show langgraph
+```
+
+**Option B: Manual installation (if script fails)**
+```bash
+# Install core dependencies first
+pip install fastapi==0.104.1 uvicorn[standard]==0.24.0 "pydantic>=2.7.4,<3.0.0"
+
+# Install LangChain and LangGraph
+pip install "langchain-core>=1.0.0,<2.0.0" "langchain>=0.3.0,<2.0.0"
+pip install "langgraph>=0.2.0,<2.0.0" "langgraph-checkpoint>=3.0.0,<4.0.0"
+
+# Install remaining dependencies
+pip install -r requirements.txt --no-deps || pip install python-telegram-bot==20.7
+
+# Install LlamaIndex separately (may have conflicts)
+pip install llama-index==0.10.57 || echo "LlamaIndex optional"
 ```
 
 ### 3. Test LangGraph Setup
