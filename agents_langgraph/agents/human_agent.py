@@ -6,7 +6,9 @@ import logging
 from typing import Literal
 from langgraph.types import Command
 from agents_langgraph.state import AgentState
-from langgraph.graph import interrupt
+
+# Note: interrupt is typically used in LangGraph checkpoints, not in agent functions
+# For Telegram bot, we handle interrupts through the integration layer
 
 logger = logging.getLogger(__name__)
 
@@ -33,21 +35,17 @@ async def human_agent(state: AgentState) -> Command[Literal["router_agent", "hum
         logger.info(f"HumanAgent: Processing for user {user_id}, needs_clarification: {needs_clarification}")
         
         if needs_clarification and clarification_message:
-            # Request clarification using interrupt
-            user_input = interrupt(value=clarification_message)
+            # For Telegram bot, clarification is handled in the integration layer
+            # This agent just sets up the clarification request in state
+            # The integration layer will send the message and wait for user response
             
-            # Add user's clarification to messages
-            from langchain_core.messages import HumanMessage
-            clarification_msg = HumanMessage(content=user_input)
-            
-            # Route back to router with clarification
+            # Update state to indicate clarification needed
             return Command(
-                goto="router_agent",
+                goto="__end__",
                 update={
-                    "messages": [clarification_msg],
-                    "needs_clarification": False,
-                    "clarification_message": None,
-                    "active_agent": "router_agent"
+                    "needs_clarification": True,
+                    "clarification_message": clarification_message,
+                    "active_agent": "human"
                 }
             )
         
