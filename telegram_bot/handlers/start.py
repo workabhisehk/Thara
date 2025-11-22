@@ -156,8 +156,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             from telegram_bot.handlers.scheduling_messages import handle_scheduling_message
             await handle_scheduling_message(update, context)
         else:
-            # Process natural language with AI
-            await handle_natural_language(update, context)
+            # Process natural language with LangGraph multi-agent system
+            try:
+                from agents_langgraph.integration import handle_message_with_langgraph
+                await handle_message_with_langgraph(update, context)
+            except Exception as langgraph_error:
+                logger.warning(f"LangGraph handler failed, falling back to natural language: {langgraph_error}")
+                # Fallback to existing natural language handler
+                await handle_natural_language(update, context)
             
     except Exception as e:
         logger.error(f"Error in handle_message: {e}", exc_info=True)

@@ -13,6 +13,9 @@ langchain>=0.3.0
 langchain-google-genai>=2.0.0
 langchain-openai>=0.2.0
 langchain-community>=0.3.0
+
+# LangGraph for multi-agent conversational AI
+langgraph>=0.2.0
 llama-index==0.10.57
 llama-index-vector-stores-postgres==0.1.5
 llama-index-embeddings-openai==0.1.9
