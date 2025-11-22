@@ -6,7 +6,7 @@ import logging
 from typing import Literal
 from langgraph.types import Command
 from agents_langgraph.state import AgentState
-, interrupt
+from langgraph.graph import interrupt
 
 logger = logging.getLogger(__name__)
 
