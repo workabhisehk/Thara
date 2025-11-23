@@ -573,17 +573,61 @@ async def handle_task_due_date_input(update: Update, context: ContextTypes.DEFAU
         )
         return
     
+    # Extract date-related phrases from the message
+    # Handle cases like "just setup the reminder for monday morning" or "coming monday morning"
+    import re
+    date_patterns = [
+        r'(?:coming|next|this)\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+morning|\s+afternoon|\s+evening)?',
+        r'(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+morning|\s+afternoon|\s+evening)?',
+        r'tomorrow(?:\s+morning|\s+afternoon|\s+evening)?',
+        r'today(?:\s+morning|\s+afternoon|\s+evening)?',
+        r'next\s+week',
+        r'in\s+\d+\s+days?',
+    ]
+    
+    extracted_date_text = text
+    for pattern in date_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            extracted_date_text = match.group(0)
+            logger.info(f"Extracted date phrase: '{extracted_date_text}' from '{text}'")
+            break
+    
+    # Also try to extract if user says "for monday" or "on monday"
+    if "for " in text_lower or "on " in text_lower:
+        for_match = re.search(r'(?:for|on)\s+([^,\.!?]+)', text_lower)
+        if for_match:
+            potential_date = for_match.group(1).strip()
+            # Check if it looks like a date
+            if any(day in potential_date for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'tomorrow', 'today', 'week']):
+                extracted_date_text = potential_date
+                logger.info(f"Extracted date from 'for/on' phrase: '{extracted_date_text}'")
+    
     # Validate and parse due date using validation helpers
     from edge_cases.validation import validate_due_date
-    is_valid, error_msg, parsed_date = validate_due_date(text, allow_past=False)
+    is_valid, error_msg, parsed_date = validate_due_date(extracted_date_text, allow_past=False)
+    
+    if not is_valid:
+        # Try the original text as fallback
+        is_valid, error_msg, parsed_date = validate_due_date(text, allow_past=False)
     
     if not is_valid:
         await update.message.reply_text(
-            f"⚠️ {error_msg}\n\nPlease try again (e.g., 'tomorrow', 'Dec 25', 'next week', or 'none'):"
+            f"⚠️ {error_msg}\n\nPlease try again (e.g., 'monday morning', 'tomorrow', 'Dec 25', 'next week', or 'none'):"
         )
         return
     
     if parsed_date:
+        # If "morning" was mentioned, set time to 9 AM
+        if "morning" in text_lower:
+            parsed_date = parsed_date.replace(hour=9, minute=0, second=0, microsecond=0)
+        # If "afternoon" was mentioned, set time to 2 PM
+        elif "afternoon" in text_lower:
+            parsed_date = parsed_date.replace(hour=14, minute=0, second=0, microsecond=0)
+        # If "evening" was mentioned, set time to 6 PM
+        elif "evening" in text_lower:
+            parsed_date = parsed_date.replace(hour=18, minute=0, second=0, microsecond=0)
+        
         conv_context.data["task_due_date"] = parsed_date
         
         # Move to duration

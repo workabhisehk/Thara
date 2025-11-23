@@ -105,7 +105,7 @@ def validate_priority(priority: str) -> Tuple[bool, Optional[str]]:
 
 def validate_due_date(date_str: str, allow_past: bool = False) -> Tuple[bool, Optional[str], Optional[datetime]]:
     """
-    Validate due date string.
+    Validate due date string with support for natural language dates.
     
     Args:
         date_str: Date string to validate
@@ -123,7 +123,16 @@ def validate_due_date(date_str: str, allow_past: bool = False) -> Tuple[bool, Op
         return True, None, None
     
     try:
-        parsed_date = date_parser.parse(date_str)
+        # Use the enhanced date parser that handles natural language
+        from ai.task_entity_extraction import parse_due_date as parse_natural_date
+        parsed_date = parse_natural_date(date_str)
+        
+        if parsed_date is None:
+            # If parse_natural_date returns None, try dateutil as fallback
+            try:
+                parsed_date = date_parser.parse(date_str)
+            except Exception:
+                return False, f"Could not parse date '{date_str}'. Please use formats like 'tomorrow', 'Dec 25', 'next week', etc.", None
         
         # Check if past date (unless allowed)
         if not allow_past and parsed_date < datetime.utcnow():
@@ -132,6 +141,7 @@ def validate_due_date(date_str: str, allow_past: bool = False) -> Tuple[bool, Op
         return True, None, parsed_date
         
     except Exception as e:
+        logger.warning(f"Error parsing date '{date_str}': {e}")
         return False, f"Could not parse date '{date_str}'. Please use formats like 'tomorrow', 'Dec 25', 'next week', etc.", None
 
 

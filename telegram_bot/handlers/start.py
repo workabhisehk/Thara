@@ -112,9 +112,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         logger.info(f"Received message from user {user.id}: {text[:50]}...")
         
-        # Get conversation state
-        state = get_conversation_state(user.id)
-        context_data = get_conversation_context(user.id)
+        # Get conversation state (use async version for database-backed state)
+        from telegram_bot.conversation import get_conversation_state_async, get_conversation_context_async
+        state = await get_conversation_state_async(user.id)
+        context_data = await get_conversation_context_async(user.id)
         
         logger.info(f"Received message from user {user.id}: '{text[:50]}...' | State: {state}")
         
@@ -169,10 +170,84 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             from telegram_bot.handlers.scheduling_messages import handle_scheduling_message
             await handle_scheduling_message(update, context)
         else:
-            # Process natural language - try Parlant first, then LangGraph, then fallback
+            # Check if user is correcting a pending task confirmation
+            # This handles cases like "category: other" when task confirmation is shown
+            conv_context = await get_conversation_context_async(user.id)
+            if conv_context.data.get("task_title") and conv_context.data.get("nl_task_creation"):
+                # Check if message is a correction
+                text_lower = text.lower().strip()
+                
+                # Parse corrections like "category: other", "pillar: work", etc.
+                import re
+                category_match = re.match(r'^(?:category|pillar|cat):\s*(\w+)', text_lower)
+                priority_match = re.match(r'^priority:\s*(\w+)', text_lower)
+                
+                if category_match:
+                    # User is correcting the category
+                    new_category = category_match.group(1).lower()
+                    valid_categories = ["work", "education", "projects", "personal", "other"]
+                    
+                    if new_category in valid_categories:
+                        # Update category and re-show confirmation
+                        conv_context.data["task_pillar"] = new_category
+                        logger.info(f"User {user.id} corrected category to: {new_category}")
+                        
+                        # Re-show confirmation with updated category
+                        from telegram_bot.handlers.natural_language_tasks import show_task_confirmation
+                        async with AsyncSessionLocal() as session:
+                            stmt = select(User).where(User.telegram_id == user.id)
+                            result = await session.execute(stmt)
+                            db_user = result.scalar_one_or_none()
+                            if db_user:
+                                await show_task_confirmation(update, context, session, db_user, 0.8)
+                        return
+                    else:
+                        await update.message.reply_text(
+                            f"⚠️ Invalid category '{new_category}'. Valid categories: {', '.join(valid_categories)}\n\n"
+                            "Please try again or use the buttons."
+                        )
+                        return
+                
+                elif priority_match:
+                    # User is correcting the priority
+                    new_priority = priority_match.group(1).lower()
+                    valid_priorities = ["low", "medium", "high", "urgent"]
+                    
+                    if new_priority in valid_priorities:
+                        conv_context.data["task_priority"] = new_priority
+                        logger.info(f"User {user.id} corrected priority to: {new_priority}")
+                        
+                        # Re-show confirmation
+                        from telegram_bot.handlers.natural_language_tasks import show_task_confirmation
+                        async with AsyncSessionLocal() as session:
+                            stmt = select(User).where(User.telegram_id == user.id)
+                            result = await session.execute(stmt)
+                            db_user = result.scalar_one_or_none()
+                            if db_user:
+                                await show_task_confirmation(update, context, session, db_user, 0.8)
+                        return
+            
+            # Process natural language - check for hybrid mode first
+            from config import settings
+            use_hybrid_mode = getattr(settings, 'use_hybrid_mode', False)
+            
+            if use_hybrid_mode:
+                # Hybrid mode: intelligently route between Parlant and LangGraph
+                logger.info("Using hybrid mode: routing between Parlant and LangGraph")
+                try:
+                    from agents_hybrid.router import handle_message_hybrid
+                    await handle_message_hybrid(update, context, conversation_state=state.value if state else None)
+                    return
+                except ImportError:
+                    logger.warning("Hybrid mode enabled but router not available, falling back to default routing")
+                    # Fall through to default routing
+                except Exception as hybrid_error:
+                    logger.warning(f"Hybrid mode failed: {hybrid_error}, falling back to default routing")
+                    # Fall through to default routing
+            
+            # Default routing: try Parlant first (if enabled), then LangGraph, then fallback
             try:
                 # Try Parlant first (if enabled)
-                from config import settings
                 use_parlant = getattr(settings, 'use_parlant', False)
                 
                 if use_parlant:

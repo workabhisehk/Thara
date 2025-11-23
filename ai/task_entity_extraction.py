@@ -143,9 +143,64 @@ def extract_title_fallback(message: str) -> str:
 
 
 def parse_due_date(date_str: str) -> Optional[datetime]:
-    """Parse due date from string using dateutil."""
+    """Parse due date from string using dateutil with enhanced natural language support."""
     if not date_str:
         return None
+    
+    date_str = date_str.strip().lower()
+    now = datetime.utcnow()
+    
+    try:
+        # Handle "coming monday", "next monday", "this monday"
+        import re
+        coming_match = re.match(r'(?:coming|next|this)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)', date_str)
+        if coming_match:
+            day_name = coming_match.group(1)
+            # Calculate next occurrence of that day
+            days_ahead = {
+                'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                'friday': 4, 'saturday': 5, 'sunday': 6
+            }[day_name]
+            next_date = now + relativedelta(weeks=1 if 'next' in date_str else 0, weekday=days_ahead)
+            
+            # Handle time of day
+            if 'morning' in date_str:
+                next_date = next_date.replace(hour=9, minute=0, second=0, microsecond=0)
+            elif 'afternoon' in date_str:
+                next_date = next_date.replace(hour=14, minute=0, second=0, microsecond=0)
+            elif 'evening' in date_str:
+                next_date = next_date.replace(hour=18, minute=0, second=0, microsecond=0)
+            
+            return next_date
+        
+        # Handle "monday morning", "tuesday afternoon", etc.
+        day_time_match = re.match(r'(monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+(morning|afternoon|evening))?', date_str)
+        if day_time_match:
+            day_name = day_time_match.group(1)
+            time_of_day = day_time_match.group(2) if day_time_match.group(2) else None
+            
+            # Calculate next occurrence of that day
+            days_ahead = {
+                'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+                'friday': 4, 'saturday': 5, 'sunday': 6
+            }[day_name]
+            next_date = now + relativedelta(weeks=0, weekday=days_ahead)
+            
+            # If the day has passed this week, get next week
+            if next_date < now:
+                next_date = next_date + relativedelta(weeks=1)
+            
+            # Handle time of day
+            if time_of_day == 'morning':
+                next_date = next_date.replace(hour=9, minute=0, second=0, microsecond=0)
+            elif time_of_day == 'afternoon':
+                next_date = next_date.replace(hour=14, minute=0, second=0, microsecond=0)
+            elif time_of_day == 'evening':
+                next_date = next_date.replace(hour=18, minute=0, second=0, microsecond=0)
+            
+            return next_date
+    except Exception as e:
+        logger.debug(f"Could not parse relative date '{date_str}': {e}")
     
     try:
         date_str_lower = date_str.lower().strip()

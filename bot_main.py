@@ -85,6 +85,7 @@ except ImportError as e:
 logging.getLogger('httpx').setLevel(logging.WARNING)
 logging.getLogger('httpcore').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('telegram.ext.ExtBot').setLevel(logging.INFO)  # Reduce polling debug noise
 
 
 def validate_environment_on_startup():
@@ -223,9 +224,14 @@ def main():
         logger.info("")
         
         # Run the bot
+        # Note: run_polling() uses long polling - it checks Telegram for new messages
+        # This is the standard way Telegram bots receive messages
+        # The "No new updates found" messages are just debug logs - this is normal behavior
+        # Scheduled jobs run independently in the background via APScheduler
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
+            drop_pending_updates=True,
+            poll_interval=10.0  # Check every 10 seconds (default, can't be lower)
         )
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")

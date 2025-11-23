@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     
     # Agent Framework Selection
     use_parlant: bool = Field(False, env="USE_PARLANT")  # Set to True to use Parlant instead of LangGraph
+    use_hybrid_mode: bool = Field(False, env="USE_HYBRID_MODE")  # Set to True to use both Parlant and LangGraph intelligently
     
     class Config:
         env_file = ".env"
