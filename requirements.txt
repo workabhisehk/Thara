@@ -19,6 +19,9 @@ langchain-community>=0.3.0,<1.0.0
 langgraph>=0.2.0,<2.0.0
 langgraph-checkpoint>=3.0.0,<4.0.0
 
+# Parlant for rule-following AI agents
+parlant>=3.0.0
+
 # LlamaIndex (may conflict with newer langchain, install separately if needed)
 llama-index==0.10.57
 llama-index-vector-stores-postgres==0.1.5

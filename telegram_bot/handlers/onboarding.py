@@ -13,8 +13,11 @@ from sqlalchemy import select
 from telegram_bot.conversation import (
     ConversationState, 
     set_conversation_state, 
+    set_conversation_state_async,
     get_conversation_context,
-    get_conversation_state
+    get_conversation_context_async,
+    get_conversation_state,
+    get_conversation_state_async
 )
 from telegram_bot.keyboards import get_pillar_keyboard
 
@@ -142,47 +145,63 @@ def parse_work_hours(text: str) -> Optional[tuple]:
     """
     text = text.lower().strip()
     
-    # Pattern 1: "9 AM - 5 PM" or "9 AM to 5 PM"
-    pattern1 = r'(\d+)\s*(am|pm)\s*[-to]+\s*(\d+)\s*(am|pm)'
+    # Pattern 1: "9 AM - 5 PM" or "9 AM to 5 PM" or "9am-5pm"
+    pattern1 = r'(\d+):?(\d+)?\s*(am|pm)\s*[-to]+\s*(\d+):?(\d+)?\s*(am|pm)'
     match = re.search(pattern1, text)
     if match:
         start_hour = int(match.group(1))
-        start_period = match.group(2)
-        end_hour = int(match.group(3))
-        end_period = match.group(4)
+        start_minute = int(match.group(2)) if match.group(2) else 0
+        start_period = match.group(3)
+        end_hour = int(match.group(4))
+        end_minute = int(match.group(5)) if match.group(5) else 0
+        end_period = match.group(6)
         
         # Convert to 24-hour format
         if start_period == 'pm' and start_hour != 12:
             start_hour += 12
-        if start_period == 'am' and start_hour == 12:
+        elif start_period == 'am' and start_hour == 12:
             start_hour = 0
         
         if end_period == 'pm' and end_hour != 12:
             end_hour += 12
-        if end_period == 'am' and end_hour == 12:
+        elif end_period == 'am' and end_hour == 12:
             end_hour = 0
         
+        # For now, just return hours (minutes are stored in notes)
         return (start_hour, end_hour)
     
-    # Pattern 2: "09:00-17:00" or "09:00 to 17:00"
-    pattern2 = r'(\d{1,2}):\d{2}\s*[-to]+\s*(\d{1,2}):\d{2}'
+    # Pattern 2: "09:00-17:00" or "09:00 to 17:00" or "9:00-17:00"
+    pattern2 = r'(\d{1,2}):(\d{2})\s*[-to]+\s*(\d{1,2}):(\d{2})'
     match = re.search(pattern2, text)
     if match:
         start_hour = int(match.group(1))
-        end_hour = int(match.group(2))
+        end_hour = int(match.group(3))
         if 0 <= start_hour < 24 and 0 <= end_hour < 24:
             return (start_hour, end_hour)
     
-    # Pattern 3: Just numbers "9 5" or "9-5"
+    # Pattern 3: Just numbers "9 5" or "9-5" or "9 to 5"
     pattern3 = r'(\d+)\s*[-to]+\s*(\d+)'
     match = re.search(pattern3, text)
     if match:
         start_hour = int(match.group(1))
         end_hour = int(match.group(2))
-        # Assume 24-hour format if end < start, otherwise assume AM/PM
-        if end_hour < start_hour:
+        # If end < start, assume AM/PM format (e.g., 9-5 means 9 AM to 5 PM)
+        if end_hour < start_hour and start_hour <= 12:
             # Likely 9 AM - 5 PM
-            return (start_hour, end_hour + 12)
+            if end_hour <= 12:
+                return (start_hour, end_hour + 12)
+        elif 0 <= start_hour < 24 and 0 <= end_hour < 24:
+            return (start_hour, end_hour)
+    
+    # Pattern 4: "Monday-Friday 9-5" or similar with day prefix
+    pattern4 = r'[a-z\s,]+(\d+)\s*[-to]+\s*(\d+)'
+    match = re.search(pattern4, text)
+    if match:
+        start_hour = int(match.group(1))
+        end_hour = int(match.group(2))
+        if end_hour < start_hour and start_hour <= 12:
+            if end_hour <= 12:
+                return (start_hour, end_hour + 12)
         elif 0 <= start_hour < 24 and 0 <= end_hour < 24:
             return (start_hour, end_hour)
     
@@ -205,10 +224,17 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
             )
             return
         
-        state = get_conversation_state(user.id)
-        conv_context = get_conversation_context(user.id)
+        # Use async state functions for database-backed state
+        state = await get_conversation_state_async(user.id)
+        conv_context = await get_conversation_context_async(user.id)
         
-        logger.info(f"Onboarding message from user {user.id}, state: {state}, text: {text[:50]}")
+        logger.info("=" * 80)
+        logger.info(f"📨 ONBOARDING MESSAGE")
+        logger.info(f"   User: {user.id} ({user.username or 'no username'})")
+        logger.info(f"   State: {state}")
+        logger.info(f"   Text: '{text[:100]}...'")
+        logger.info(f"   Context data keys: {list(conv_context.data.keys())}")
+        logger.info("=" * 80)
         
         async with AsyncSessionLocal() as session:
             try:
@@ -224,7 +250,9 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
                     return
                 
                 # Route based on state
-                if state == ConversationState.ONBOARDING_PILLARS:
+                if state == ConversationState.ONBOARDING_NAME:
+                    await handle_name_input(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING_PILLARS:
                     await handle_pillar_selection_text(update, context, session, db_user)
                 elif state == ConversationState.ONBOARDING_CUSTOM_PILLAR:
                     await handle_custom_pillar_input(update, context, session, db_user)
@@ -232,12 +260,16 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
                     await handle_work_hours_input(update, context, session, db_user)
                 elif state == ConversationState.ONBOARDING_TIMEZONE:
                     await handle_timezone_input(update, context, session, db_user)
-                elif state == ConversationState.ONBOARDING_TASKS:
+                elif state == ConversationState.ONBOARDING_INITIAL_TASKS:
                     await handle_initial_tasks_input(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING_HABITS:
+                    await handle_habits_input(update, context, session, db_user)
+                elif state == ConversationState.ONBOARDING_MOOD_TRACKING:
+                    await handle_mood_tracking_input(update, context, session, db_user)
                 elif state == ConversationState.ONBOARDING:
-                    # Default to pillar selection
-                    set_conversation_state(user.id, ConversationState.ONBOARDING_PILLARS)
-                    await show_pillar_selection(update, context, session, db_user)
+                    # Default to name collection (first step)
+                    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_NAME)
+                    await show_name_collection(update, context, session, db_user)
                 else:
                     # Use AI to understand what user is saying
                     from ai.onboarding_parser import parse_onboarding_message
@@ -270,22 +302,126 @@ async def handle_onboarding_message(update: Update, context: ContextTypes.DEFAUL
                         )
                         
             except Exception as handler_error:
-                logger.error(f"Error in onboarding handler for state {state}: {handler_error}", exc_info=True)
-                await update.message.reply_text(
-                    "⚠️ I encountered an error processing your response.\n\n"
-                    "Please try again or use /start to restart onboarding.\n\n"
-                    "If this persists, check the bot logs."
-                )
+                logger.error("=" * 80)
+                logger.error(f"Error in onboarding handler for state {state}: {handler_error}")
+                logger.error(f"Error type: {type(handler_error).__name__}")
+                logger.error(f"User: {user.id}, Text: {text[:100]}")
+                logger.error("Full traceback:")
+                import traceback
+                logger.error(traceback.format_exc())
+                logger.error("=" * 80)
+                
+                # Show more helpful error message
+                error_msg = str(handler_error)
+                if "work_hours" in error_msg.lower() or state == ConversationState.ONBOARDING_WORK_HOURS:
+                    await update.message.reply_text(
+                        f"⚠️ Error processing work hours: {error_msg[:100]}\n\n"
+                        "Please try a simple format like: '9 AM to 5 PM'\n\n"
+                        "Or use /start to restart onboarding."
+                    )
+                else:
+                    await update.message.reply_text(
+                        "⚠️ I encountered an error processing your response.\n\n"
+                        "Please try again or use /start to restart onboarding.\n\n"
+                        "If this persists, check the bot logs."
+                    )
                 
     except Exception as e:
-        logger.error(f"Fatal error in handle_onboarding_message: {e}", exc_info=True)
+        logger.error("=" * 80)
+        logger.error(f"Fatal error in handle_onboarding_message: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"User: {update.effective_user.id if update.effective_user else 'unknown'}")
+        logger.error(f"State: {get_conversation_state(update.effective_user.id) if update.effective_user else 'unknown'}")
+        logger.error("Full traceback:")
+        import traceback
+        logger.error(traceback.format_exc())
+        logger.error("=" * 80)
+        
         try:
-            await update.message.reply_text(
-                "👋 I encountered an unexpected error.\n\n"
-                "Please try /start to restart, or send your message again."
-            )
+            # Show specific error for work hours
+            if "work" in str(e).lower() or get_conversation_state(update.effective_user.id) == ConversationState.ONBOARDING_WORK_HOURS:
+                await update.message.reply_text(
+                    f"⚠️ Error: {type(e).__name__}\n\n"
+                    "Please try: '9 AM to 5 PM' or use /start to restart."
+                )
+            else:
+                await update.message.reply_text(
+                    "👋 I encountered an unexpected error.\n\n"
+                    "Please try /start to restart, or send your message again."
+                )
         except Exception:
             pass  # Failed to send message
+
+
+async def show_name_collection(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                               session: AsyncSession, db_user: User) -> None:
+    """Show name collection prompt - first step of onboarding."""
+    user = update.effective_user
+    
+    # Check if user already has a preferred name
+    if db_user.preferred_name:
+        # Skip to pillars if name already set
+        await set_conversation_state_async(user.id, ConversationState.ONBOARDING_PILLARS)
+        await show_pillar_selection(update, context, session, db_user)
+        return
+    
+    # Suggest first name from Telegram if available
+    suggested_name = user.first_name or ""
+    
+    message = (
+        "Hello! 👋 I'm **Thara**, your AI productivity assistant.\n\n"
+        "Let's get you set up! This will only take a few minutes.\n\n"
+        "First, what should I call you?\n"
+    )
+    
+    if suggested_name:
+        message += f"I see your name is {suggested_name} - is that what you'd like me to use, or would you prefer something else?"
+    else:
+        message += "Please tell me your name (or what you'd like me to call you):"
+    
+    if update.callback_query:
+        await update.callback_query.message.edit_text(message)
+    else:
+        await update.message.reply_text(message)
+
+
+async def handle_name_input(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                            session: AsyncSession, db_user: User) -> None:
+    """Handle name input during onboarding."""
+    user = update.effective_user
+    text = update.message.text.strip()
+    
+    # Validate name
+    if not text or len(text) < 1:
+        await update.message.reply_text(
+            "⚠️ Please provide a valid name. What would you like me to call you?"
+        )
+        return
+    
+    if len(text) > 50:
+        await update.message.reply_text(
+            "⚠️ Name is too long (max 50 characters). Please provide a shorter name:"
+        )
+        return
+    
+    # Store preferred name
+    db_user.preferred_name = text.strip()
+    await session.commit()
+    
+    logger.info(f"User {user.id} set preferred name: {text}")
+    
+    # Move to pillar selection
+    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_PILLARS)
+    logger.info(f"✅ State updated: ONBOARDING_NAME -> ONBOARDING_PILLARS for user {user.id}")
+    
+    await update.message.reply_text(
+        f"Nice to meet you, {text}! 😊\n\n"
+        "Now, which categories (pillars) would you like to track?\n"
+        "You can select from common categories, create your own, or just tell me in natural language - I'll understand! 😊"
+    )
+    
+    # Show pillar selection
+    await show_pillar_selection(update, context, session, db_user)
 
 
 async def show_pillar_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, 
@@ -295,11 +431,14 @@ async def show_pillar_selection(update: Update, context: ContextTypes.DEFAULT_TY
     selected_pillars = conv_context.data.get("pillars", [])
     custom_pillars = conv_context.data.get("custom_pillars", [])
     
+    user = update.effective_user
+    preferred_name = db_user.preferred_name or user.first_name or "there"
+    
     message = (
-        "Hello! 👋 I'm **Thara**, your AI productivity assistant. My mission is to help you manage tasks, "
+        f"Great, {preferred_name}! 👋\n\n"
+        "My mission is to help you manage tasks, "
         "schedule commitments, and maintain productivity across work, education, and personal domains.\n\n"
-        "Let's get you set up! This will only take a few minutes.\n\n"
-        "First, which categories (pillars) would you like to track?\n"
+        "Which categories (pillars) would you like to track?\n"
         "You can select from common categories, create your own, or just tell me in natural language - I'll understand! 😊"
     )
     
@@ -461,6 +600,32 @@ async def handle_work_hours_input(update: Update, context: ContextTypes.DEFAULT_
     user = update.effective_user
     text = update.message.text.strip()
     
+    # Validate state first (use async for database-backed state)
+    current_state = await get_conversation_state_async(user.id)
+    if current_state != ConversationState.ONBOARDING_WORK_HOURS:
+        logger.warning(f"State mismatch for user {user.id}! Expected ONBOARDING_WORK_HOURS, got {current_state}. Fixing...")
+        await set_conversation_state_async(user.id, ConversationState.ONBOARDING_WORK_HOURS)
+    
+    logger.info("=" * 80)
+    logger.info(f"🕐 HANDLE_WORK_HOURS_INPUT")
+    logger.info(f"   User: {user.id}")
+    logger.info(f"   State: {current_state}")
+    logger.info(f"   Input: '{text}'")
+    logger.info("=" * 80)
+    
+    # Check for skip command
+    if text.lower() in ["skip", "skip this", "later"]:
+        logger.info(f"User {user.id} skipped work hours")
+        set_conversation_state(user.id, ConversationState.ONBOARDING_TIMEZONE)
+        await update.message.reply_text(
+            "⏭️ Skipped work hours setup.\n\n"
+            "What timezone are you in?\n\n"
+            "Examples: PST, EST, UTC, GMT+5:30, America/New_York\n"
+            "Or select from common timezones:",
+            reply_markup=get_timezone_keyboard()
+        )
+        return
+    
     # Use AI to parse work hours from natural language
     from ai.onboarding_parser import (
         parse_onboarding_message,
@@ -468,7 +633,19 @@ async def handle_work_hours_input(update: Update, context: ContextTypes.DEFAULT_
         normalize_days_of_week
     )
     
-    parsed = await parse_onboarding_message(text, current_step="work_hours")
+    try:
+        parsed = await parse_onboarding_message(text, current_step="work_hours")
+        logger.info(f"AI parsing result: {parsed}")
+    except Exception as e:
+        logger.error(f"Error calling AI parser: {e}", exc_info=True)
+        parsed = {
+            "pillars": [],
+            "work_hours": {},
+            "timezone": None,
+            "confidence": 0.0,
+            "response_type": "general",
+            "error": str(e)
+        }
     
     work_hours_info = parsed.get("work_hours", {})
     
@@ -476,21 +653,67 @@ async def handle_work_hours_input(update: Update, context: ContextTypes.DEFAULT_
     start_time_str = work_hours_info.get("start_time")
     end_time_str = work_hours_info.get("end_time")
     
-    # Normalize times
-    start_normalized = normalize_time_to_24h(start_time_str) if start_time_str else None
-    end_normalized = normalize_time_to_24h(end_time_str) if end_time_str else None
+    logger.info(f"Extracted times from AI: start='{start_time_str}', end='{end_time_str}'")
     
-    # Also try fallback regex parsing
+    # Normalize times
+    start_normalized = None
+    end_normalized = None
+    
+    # Check if times are already in HH:MM format (24h)
+    time_pattern = re.compile(r'^(\d{1,2}):(\d{2})$')
+    
+    if start_time_str:
+        # If already in HH:MM format, validate and use directly
+        match = time_pattern.match(start_time_str.strip())
+        if match:
+            hour = int(match.group(1))
+            minute = int(match.group(2))
+            if 0 <= hour < 24 and 0 <= minute < 60:
+                start_normalized = f"{hour:02d}:{minute:02d}"
+                logger.info(f"Using AI time directly (already 24h): '{start_time_str}'")
+        
+        # Otherwise, try to normalize
+        if not start_normalized:
+            try:
+                start_normalized = normalize_time_to_24h(start_time_str)
+                logger.info(f"Normalized start time: '{start_time_str}' -> '{start_normalized}'")
+            except Exception as e:
+                logger.warning(f"Error normalizing start time '{start_time_str}': {e}")
+    
+    if end_time_str:
+        # If already in HH:MM format, validate and use directly
+        match = time_pattern.match(end_time_str.strip())
+        if match:
+            hour = int(match.group(1))
+            minute = int(match.group(2))
+            if 0 <= hour < 24 and 0 <= minute < 60:
+                end_normalized = f"{hour:02d}:{minute:02d}"
+                logger.info(f"Using AI time directly (already 24h): '{end_time_str}'")
+        
+        # Otherwise, try to normalize
+        if not end_normalized:
+            try:
+                end_normalized = normalize_time_to_24h(end_time_str)
+                logger.info(f"Normalized end time: '{end_time_str}' -> '{end_normalized}'")
+            except Exception as e:
+                logger.warning(f"Error normalizing end time '{end_time_str}': {e}")
+    
+    # Also try fallback regex parsing if AI parsing failed
     if not start_normalized or not end_normalized:
-        hours = parse_work_hours(text)
-        if hours:
-            start_hour, end_hour = hours
-            start_normalized = f"{start_hour:02d}:00"
-            end_normalized = f"{end_hour:02d}:00"
+        logger.info("AI parsing incomplete, trying fallback regex parser")
+        try:
+            hours = parse_work_hours(text)
+            if hours:
+                start_hour, end_hour = hours
+                start_normalized = f"{start_hour:02d}:00"
+                end_normalized = f"{end_hour:02d}:00"
+                logger.info(f"Fallback parser extracted: {start_normalized} - {end_normalized}")
+        except Exception as e:
+            logger.warning(f"Fallback parser also failed: {e}")
     
     if not start_normalized or not end_normalized:
         # AI parsing failed, provide helpful error
-        logger.warning(f"Failed to parse work hours from: '{text}' (AI confidence: {parsed.get('confidence', 0)})")
+        logger.warning(f"Failed to parse work hours from: '{text}' (AI confidence: {parsed.get('confidence', 0)}, work_hours_info: {work_hours_info})")
         await update.message.reply_text(
             "⚠️ I couldn't understand your work hours format. Let me help!\n\n"
             "Please provide your work hours in one of these formats:\n"
@@ -499,7 +722,8 @@ async def handle_work_hours_input(update: Update, context: ContextTypes.DEFAULT_
             "• 'Monday-Friday 9-5'\n"
             "• '09:00-17:00' (24-hour format)\n\n"
             "You can also describe complex schedules like:\n"
-            "'Monday, Wednesday, Friday from 9 AM to 4 PM, with 2 hours travel time'"
+            "'Monday, Wednesday, Friday from 9 AM to 4 PM, with 2 hours travel time'\n\n"
+            "Or type 'skip' to skip this step."
         )
         return
     
@@ -529,58 +753,49 @@ async def handle_work_hours_input(update: Update, context: ContextTypes.DEFAULT_
             "Examples: '9 AM to 5 PM' or '09:00-17:00'"
         )
         return
-        
-        # Store work hours
-        db_user.work_start_hour = start_hour
-        db_user.work_end_hour = end_hour
-        
-        # Store additional notes (travel time, classes, etc.)
-        notes = work_hours_info.get("notes", "")
-        if notes:
-            # Store notes in user metadata if available
-            if not hasattr(db_user, 'metadata') or db_user.metadata is None:
-                db_user.metadata = {}
-            db_user.metadata['work_hours_notes'] = notes
-        
-        await session.commit()
-        
-        logger.info(f"User {user.id} set work hours: {start_hour}:00 - {end_hour}:00 (AI parsed)")
-        
-        # Build response message
-        response_msg = f"✅ Work hours saved!\n\n"
-        response_msg += f"Your work hours: {start_hour}:00 - {end_hour}:00\n"
-        
-        days = work_hours_info.get("days", [])
-        if days:
-            normalized_days = normalize_days_of_week(days)
-            if normalized_days:
-                days_display = ", ".join([d.capitalize() for d in normalized_days])
-                response_msg += f"Days: {days_display}\n"
-        
-        if notes:
-            response_msg += f"\n📝 Note: {notes}\n"
-        
-        response_msg += "\nWhat timezone are you in?\n\n"
-        response_msg += "Examples: PST, EST, UTC, GMT+5:30, America/New_York\n"
-        response_msg += "Or select from common timezones:"
-        
-        # Move to timezone
-        set_conversation_state(user.id, ConversationState.ONBOARDING_TIMEZONE)
-        
-        await update.message.reply_text(
-            response_msg,
-            reply_markup=get_timezone_keyboard()
-        )
-    else:
-        # Couldn't parse - ask for clarification
-        await update.message.reply_text(
-            "I'm having trouble understanding your work hours. Could you tell me in a simpler format?\n\n"
-            "Examples:\n"
-            "- '9 AM to 5 PM'\n"
-            "- 'Monday to Friday, 9 AM - 5 PM'\n"
-            "- '9:00-17:00'\n\n"
-            "Or feel free to describe it however you like - I'll do my best to understand! 😊"
-        )
+    
+    # Store work hours (executed when validation succeeds)
+    db_user.work_start_hour = start_hour
+    db_user.work_end_hour = end_hour
+    
+    # Store additional notes (travel time, classes, etc.)
+    notes = work_hours_info.get("notes", "")
+    if notes:
+        # Store notes in user metadata if available
+        if not hasattr(db_user, 'metadata') or db_user.metadata is None:
+            db_user.metadata = {}
+        db_user.metadata['work_hours_notes'] = notes
+    
+    await session.commit()
+    
+    logger.info(f"User {user.id} set work hours: {start_hour}:00 - {end_hour}:00 (AI parsed)")
+    
+    # Build response message
+    response_msg = f"✅ Work hours saved!\n\n"
+    response_msg += f"Your work hours: {start_hour}:00 - {end_hour}:00\n"
+    
+    days = work_hours_info.get("days", [])
+    if days:
+        normalized_days = normalize_days_of_week(days)
+        if normalized_days:
+            days_display = ", ".join([d.capitalize() for d in normalized_days])
+            response_msg += f"Days: {days_display}\n"
+    
+    if notes:
+        response_msg += f"\n📝 Note: {notes}\n"
+    
+    response_msg += "\nWhat timezone are you in?\n\n"
+    response_msg += "Examples: PST, EST, UTC, GMT+5:30, America/New_York\n"
+    response_msg += "Or select from common timezones:"
+    
+    # Move to timezone (use async for database-backed state)
+    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_TIMEZONE)
+    logger.info(f"✅ State updated: ONBOARDING_WORK_HOURS -> ONBOARDING_TIMEZONE for user {user.id}")
+    
+    await update.message.reply_text(
+        response_msg,
+        reply_markup=get_timezone_keyboard()
+    )
 
 
 async def handle_timezone_input(update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -595,8 +810,9 @@ async def handle_timezone_input(update: Update, context: ContextTypes.DEFAULT_TY
     
     logger.info(f"User {user.id} set timezone: {text}")
     
-    # Move to initial tasks step
-    set_conversation_state(user.id, ConversationState.ONBOARDING_TASKS)
+    # Move to initial tasks step (use async for database-backed state)
+    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_INITIAL_TASKS)
+    logger.info(f"✅ State updated: ONBOARDING_TIMEZONE -> ONBOARDING_INITIAL_TASKS for user {user.id}")
     
     await update.message.reply_text(
         "✅ Timezone saved!\n\n"
@@ -613,9 +829,116 @@ async def handle_timezone_input(update: Update, context: ContextTypes.DEFAULT_TY
 async def handle_initial_tasks_input(update: Update, context: ContextTypes.DEFAULT_TYPE,
                                      session: AsyncSession, db_user: User) -> None:
     """Handle initial tasks setup (optional step)."""
+    logger.info(f"handle_initial_tasks_input called for user {update.effective_user.id}")
     # For now, skip to habits step
     # TODO: Implement guided task creation
     await continue_to_habits(update, context, session, db_user)
+
+
+async def handle_habits_input(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                              session: AsyncSession, db_user: User) -> None:
+    """Handle habits input during onboarding with fallback chain."""
+    user = update.effective_user
+    text = update.message.text.strip()
+    
+    logger.info(f"🔵 handle_habits_input: user {user.id}, text: '{text[:50]}...'")
+    
+    # Validate state
+    current_state = get_conversation_state(user.id)
+    if current_state != ConversationState.ONBOARDING_HABITS:
+        logger.warning(f"State mismatch for user {user.id}! Expected ONBOARDING_HABITS, got {current_state}. Fixing...")
+        set_conversation_state(user.id, ConversationState.ONBOARDING_HABITS)
+    
+    # Check for skip/done commands
+    if text.lower() in ["skip", "done", "no", "none", "later"]:
+        logger.info(f"User {user.id} skipped habits")
+        set_conversation_state(user.id, ConversationState.ONBOARDING_MOOD_TRACKING)
+        await update.message.reply_text(
+            "⏭️ Skipped habits setup.\n\n"
+            "Would you like to enable mood tracking for mental health insights?",
+            reply_markup=get_yes_no_tellme_keyboard()
+        )
+        return
+    
+    # Fallback chain: Try multiple parsing strategies
+    habit_name = None
+    habit_description = None
+    
+    # Strategy 1: Direct text (simple habit name)
+    if len(text.split()) <= 5:  # Likely just a habit name
+        habit_name = text
+        logger.info(f"Strategy 1: Direct text -> habit_name: '{habit_name}'")
+    
+    # Strategy 2: Try to extract with AI (if available)
+    if not habit_name:
+        try:
+            from ai.onboarding_parser import parse_onboarding_message
+            parsed = await parse_onboarding_message(text, current_step="habits")
+            logger.info(f"Strategy 2: AI parsing result: {parsed}")
+            
+            # Extract habit info if available
+            if parsed.get("response_type") == "habits" or "habit" in text.lower():
+                # Try to extract habit name from text
+                words = text.split()
+                if words:
+                    habit_name = " ".join(words[:5])  # First 5 words as habit name
+        except Exception as e:
+            logger.warning(f"AI parsing failed for habits: {e}")
+    
+    # Strategy 3: Simple extraction (last resort)
+    if not habit_name:
+        # Just use the text as habit name
+        habit_name = text[:100]  # Limit length
+        logger.info(f"Strategy 3: Using full text as habit name: '{habit_name[:50]}...'")
+    
+    # Store habit (for now, just acknowledge - TODO: implement Habit model storage)
+    logger.info(f"✅ Extracted habit: name='{habit_name}', description='{habit_description}'")
+    
+    # Move to mood tracking
+    set_conversation_state(user.id, ConversationState.ONBOARDING_MOOD_TRACKING)
+    
+    await update.message.reply_text(
+        f"✅ Got it! I've noted: '{habit_name}'\n\n"
+        "Habit tracking will be available soon. For now, let's continue!\n\n"
+        "Would you like to enable mood tracking for mental health insights?",
+        reply_markup=get_yes_no_tellme_keyboard()
+    )
+
+
+async def handle_mood_tracking_input(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                                    session: AsyncSession, db_user: User) -> None:
+    """Handle mood tracking input during onboarding."""
+    user = update.effective_user
+    text = update.message.text.strip().lower()
+    
+    logger.info(f"🔵 handle_mood_tracking_input: user {user.id}, text: '{text[:50]}...'")
+    
+    # Validate state
+    current_state = get_conversation_state(user.id)
+    if current_state != ConversationState.ONBOARDING_MOOD_TRACKING:
+        logger.warning(f"State mismatch for user {user.id}! Expected ONBOARDING_MOOD_TRACKING, got {current_state}. Fixing...")
+        set_conversation_state(user.id, ConversationState.ONBOARDING_MOOD_TRACKING)
+    
+    # Check for yes/no responses
+    if text in ["yes", "y", "enable", "ok"]:
+        conv_context = get_conversation_context(user.id)
+        conv_context.data["mood_tracking_enabled"] = True
+        logger.info(f"User {user.id} enabled mood tracking")
+        await complete_onboarding(update, context, session, db_user)
+    elif text in ["no", "n", "skip", "later"]:
+        conv_context = get_conversation_context(user.id)
+        conv_context.data["mood_tracking_enabled"] = False
+        logger.info(f"User {user.id} disabled mood tracking")
+        await complete_onboarding(update, context, session, db_user)
+    else:
+        # Unclear response, ask for clarification
+        await update.message.reply_text(
+            "I didn't quite understand. Would you like to enable mood tracking?\n\n"
+            "This helps track your daily mood and provides insights on how your mood "
+            "relates to your productivity.\n\n"
+            "Please reply with 'yes' or 'no', or use the buttons below:",
+            reply_markup=get_yes_no_tellme_keyboard()
+        )
 
 
 async def store_pillars_and_continue(session: AsyncSession, db_user: User, 
@@ -632,7 +955,9 @@ async def store_pillars_and_continue(session: AsyncSession, db_user: User,
     # TODO: Add custom_pillars JSON field to User model
     
     # Move to work hours (actual message is sent by the callback handler)
+    # Note: This is called from callback handler, so we use sync version
     set_conversation_state(db_user.telegram_id, ConversationState.ONBOARDING_WORK_HOURS)
+    logger.info(f"✅ State updated: ONBOARDING_PILLARS -> ONBOARDING_WORK_HOURS for user {db_user.telegram_id}")
     
     logger.info(f"Storing pillars for user {db_user.telegram_id}: {selected_pillars}, custom: {custom_pillars}")
 
@@ -641,12 +966,14 @@ async def continue_to_habits(update: Update, context: ContextTypes.DEFAULT_TYPE,
                              session: AsyncSession, db_user: User) -> None:
     """Continue to habits setup step."""
     user = update.effective_user
-    set_conversation_state(user.id, ConversationState.ONBOARDING)
+    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_HABITS)
+    logger.info(f"✅ State updated: ONBOARDING_INITIAL_TASKS -> ONBOARDING_HABITS for user {user.id}")
     
     await update.message.reply_text(
         "Would you like to set up any daily habits to track?\n\n"
         "Examples: Drink water (8 glasses/day), Exercise (30 min/day), Meditation (10 min/day)\n\n"
-        "Habits help you build consistency and maintain well-being.\n\n",
+        "Habits help you build consistency and maintain well-being.\n\n"
+        "You can type a habit name, or use the buttons below:",
         reply_markup=get_yes_no_maybe_keyboard()
     )
     # TODO: Implement habits setup
@@ -657,10 +984,13 @@ async def complete_onboarding(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Complete onboarding and mark user as onboarded."""
     user = update.effective_user
     
+    logger.info(f"🎉 Completing onboarding for user {user.id}")
+    
     db_user.is_onboarded = True
     await session.commit()
     
-    set_conversation_state(user.id, ConversationState.IDLE)
+    await set_conversation_state_async(user.id, ConversationState.IDLE)
+    logger.info(f"✅ State updated: ONBOARDING_MOOD_TRACKING -> IDLE for user {user.id}")
     
     completion_message = (
         "🎉 Welcome! I'm **Thara**, your AI productivity assistant!\n\n"

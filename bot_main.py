@@ -179,6 +179,15 @@ async def post_shutdown(application: Application) -> None:
         await shutdown_scheduler()
     except Exception as e:
         logger.warning(f"Could not shutdown scheduler: {e}")
+    
+    # Cleanup Parlant (if it was initialized)
+    try:
+        from agents_parlant.agent import cleanup as cleanup_parlant
+        await cleanup_parlant()
+        logger.info("✅ Parlant cleaned up")
+    except Exception as e:
+        logger.warning(f"Could not cleanup Parlant: {e}")
+    
     logger.info("Bot shutting down")
 
 

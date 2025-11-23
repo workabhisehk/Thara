@@ -29,9 +29,10 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             
             if db_user and db_user.is_onboarded:
                 # User already onboarded
+                user_name = db_user.preferred_name or user.first_name or "there"
                 await update.message.reply_text(
                     "👋 Hi! Welcome back!\n\n"
-                    f"Hello {user.first_name}! 👋\n\n"
+                    f"Hello {user_name}! 👋\n\n"
                     "I'm **Thara**, your productivity assistant. How can I help you today?\n\n"
                     "Use /help to see available commands."
                 )
@@ -50,10 +51,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     await session.refresh(db_user)
                 
                 # Start onboarding flow according to COMPREHENSIVE_PLAN.md
-                set_conversation_state(user.id, ConversationState.ONBOARDING_PILLARS)
+                # Begin with name collection
+                from telegram_bot.conversation import set_conversation_state_async
+                from telegram_bot.handlers.onboarding import show_name_collection
+                await set_conversation_state_async(user.id, ConversationState.ONBOARDING_NAME)
                 
                 # Use the comprehensive onboarding flow
-                await show_pillar_selection(update, context, session, db_user)
+                await show_name_collection(update, context, session, db_user)
     except Exception as e:
         logger.error("=" * 80)
         logger.error(f"❌ ERROR in start_command handler!")
@@ -112,24 +116,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         state = get_conversation_state(user.id)
         context_data = get_conversation_context(user.id)
         
-        # Store conversation
+        logger.info(f"Received message from user {user.id}: '{text[:50]}...' | State: {state}")
+        
+        # Store conversation (need database user ID, not telegram_id)
         try:
             from memory.conversation_store import store_conversation
             async with AsyncSessionLocal() as session:
-                await store_conversation(
-                    session,
-                    user_id=user.id,
-                    message_id=update.message.message_id,
-                    text=text,
-                    is_from_user=True
-                )
-                await session.commit()
+                # Get database user ID
+                stmt = select(User).where(User.telegram_id == user.id)
+                result = await session.execute(stmt)
+                db_user = result.scalar_one_or_none()
+                
+                if db_user:
+                    await store_conversation(
+                        session,
+                        user_id=db_user.id,  # Use database user ID, not telegram_id
+                        message_id=update.message.message_id,
+                        text=text,
+                        is_from_user=True
+                    )
+                    await session.commit()
         except Exception as e:
             logger.warning(f"Could not store conversation: {e}")
         
         # Route based on state
         if state in [
             ConversationState.ONBOARDING,
+            ConversationState.ONBOARDING_NAME,
             ConversationState.ONBOARDING_PILLARS,
             ConversationState.ONBOARDING_CUSTOM_PILLAR,
             ConversationState.ONBOARDING_WORK_HOURS,
@@ -139,6 +152,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ConversationState.ONBOARDING_MOOD_TRACKING,
         ]:
             # Continue onboarding flow
+            logger.info(f"Routing to onboarding handler (state: {state})")
             await handle_onboarding_message(update, context)
         elif state in [
             ConversationState.ADDING_TASK,
@@ -155,7 +169,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             from telegram_bot.handlers.scheduling_messages import handle_scheduling_message
             await handle_scheduling_message(update, context)
         else:
-            # Process natural language with LangGraph multi-agent system
+            # Process natural language - try Parlant first, then LangGraph, then fallback
+            try:
+                # Try Parlant first (if enabled)
+                from config import settings
+                use_parlant = getattr(settings, 'use_parlant', False)
+                
+                if use_parlant:
+                    from agents_parlant.telegram_adapter import handle_message_with_parlant
+                    await handle_message_with_parlant(update, context)
+                    return
+            except ImportError:
+                logger.debug("Parlant not available, using LangGraph")
+            except Exception as parlant_error:
+                logger.warning(f"Parlant handler failed: {parlant_error}, falling back to LangGraph")
+            
+            # Try LangGraph multi-agent system
             try:
                 from agents_langgraph.integration import handle_message_with_langgraph
                 await handle_message_with_langgraph(update, context)

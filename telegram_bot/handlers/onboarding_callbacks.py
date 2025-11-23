@@ -10,8 +10,11 @@ from sqlalchemy import select
 from telegram_bot.conversation import (
     ConversationState, 
     get_conversation_state, 
+    get_conversation_state_async,
     get_conversation_context, 
-    set_conversation_state
+    get_conversation_context_async,
+    set_conversation_state,
+    set_conversation_state_async
 )
 from telegram_bot.handlers.onboarding import (
     get_enhanced_pillar_keyboard,
@@ -187,7 +190,8 @@ async def handle_pillars_done(update: Update, context: ContextTypes.DEFAULT_TYPE
         "You can type: '9 AM to 5 PM' or use 24-hour format: '09:00-17:00'"
     )
     
-    set_conversation_state(user.id, ConversationState.ONBOARDING_WORK_HOURS)
+    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_WORK_HOURS)
+    logger.info(f"✅ State updated: ONBOARDING_PILLARS -> ONBOARDING_WORK_HOURS for user {user.id}")
 
 
 async def handle_pillars_skip(update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -210,7 +214,8 @@ async def handle_pillars_skip(update: Update, context: ContextTypes.DEFAULT_TYPE
         "You can type: '9 AM to 5 PM' or use 24-hour format: '09:00-17:00'"
     )
     
-    set_conversation_state(user.id, ConversationState.ONBOARDING_WORK_HOURS)
+    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_WORK_HOURS)
+    logger.info(f"✅ State updated: ONBOARDING_PILLARS -> ONBOARDING_WORK_HOURS for user {user.id}")
 
 
 async def handle_timezone_callback(update: Update, context: ContextTypes.DEFAULT_TYPE,
@@ -237,7 +242,8 @@ async def handle_timezone_callback(update: Update, context: ContextTypes.DEFAULT
     logger.info(f"User {user.id} set timezone: {timezone}")
     
     # Move to initial tasks
-    set_conversation_state(user.id, ConversationState.ONBOARDING_INITIAL_TASKS)
+    await set_conversation_state_async(user.id, ConversationState.ONBOARDING_INITIAL_TASKS)
+    logger.info(f"✅ State updated: ONBOARDING_TIMEZONE -> ONBOARDING_INITIAL_TASKS for user {user.id}")
     
     await query.message.edit_text(
         f"✅ Timezone saved!\n\n"
@@ -266,14 +272,16 @@ async def handle_onboarding_yes_no(update: Update, context: ContextTypes.DEFAULT
                 "Initial task creation coming soon! For now, let's continue.\n\n"
                 "Would you like to set up any daily habits to track?"
             )
-            set_conversation_state(user.id, ConversationState.ONBOARDING_HABITS)
+            await set_conversation_state_async(user.id, ConversationState.ONBOARDING_HABITS)
+            logger.info(f"✅ State updated: ONBOARDING_INITIAL_TASKS -> ONBOARDING_HABITS for user {user.id}")
         elif callback_data == "no" or callback_data == "maybe_later":
             await query.message.edit_text(
                 "No problem! You can add tasks anytime.\n\n"
                 "Would you like to set up any daily habits to track?",
                 reply_markup=get_yes_no_maybe_keyboard()
             )
-            set_conversation_state(user.id, ConversationState.ONBOARDING_HABITS)
+            await set_conversation_state_async(user.id, ConversationState.ONBOARDING_HABITS)
+            logger.info(f"✅ State updated: ONBOARDING_INITIAL_TASKS -> ONBOARDING_HABITS for user {user.id}")
     
     elif state == ConversationState.ONBOARDING_HABITS:
         if callback_data == "yes":
@@ -282,14 +290,16 @@ async def handle_onboarding_yes_no(update: Update, context: ContextTypes.DEFAULT
                 "Habit creation coming soon! Let's continue.\n\n"
                 "Would you like to enable mood tracking for mental health insights?"
             )
-            set_conversation_state(user.id, ConversationState.ONBOARDING_MOOD_TRACKING)
+            await set_conversation_state_async(user.id, ConversationState.ONBOARDING_MOOD_TRACKING)
+            logger.info(f"✅ State updated: ONBOARDING_HABITS -> ONBOARDING_MOOD_TRACKING for user {user.id}")
         elif callback_data == "no" or callback_data == "maybe_later":
             await query.message.edit_text(
                 "No problem! You can add habits anytime.\n\n"
                 "Would you like to enable mood tracking for mental health insights?",
                 reply_markup=get_yes_no_tellme_keyboard()
             )
-            set_conversation_state(user.id, ConversationState.ONBOARDING_MOOD_TRACKING)
+            await set_conversation_state_async(user.id, ConversationState.ONBOARDING_MOOD_TRACKING)
+            logger.info(f"✅ State updated: ONBOARDING_HABITS -> ONBOARDING_MOOD_TRACKING for user {user.id}")
     
     elif state == ConversationState.ONBOARDING_MOOD_TRACKING:
         # Store mood tracking preference in context (will be added to User model later)

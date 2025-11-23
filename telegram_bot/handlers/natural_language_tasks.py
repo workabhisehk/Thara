@@ -228,30 +228,40 @@ async def handle_nl_task_callbacks(
                 return
             
             # Create task
-            task = await create_task(
-                session,
-                db_user.id,
-                title=task_title,
-                description=description,
-                pillar=pillar,
-                priority=priority,
-                due_date=due_date,
-                estimated_duration=duration
-            )
-            
-            await session.commit()
-            
-            await query.answer("✅ Task created!")
-            await query.message.edit_text(
-                f"✅ **Task created!**\n\n"
-                f"**{task.title}**\n\n"
-                "I'll remind you before the deadline.",
-                parse_mode="Markdown"
-            )
-            
-            # Clear context
-            clear_conversation_context(user.id)
-            logger.info(f"User {user.id} created task {task.id} via natural language: {task.title}")
+            try:
+                task = await create_task(
+                    session,
+                    db_user.id,
+                    title=task_title,
+                    description=description,
+                    pillar=pillar,
+                    priority=priority,
+                    due_date=due_date,
+                    estimated_duration=duration
+                )
+                
+                await session.commit()
+                
+                await query.answer("✅ Task created!")
+                await query.message.edit_text(
+                    f"✅ **Task created!**\n\n"
+                    f"**{task.title}**\n\n"
+                    "I'll remind you before the deadline.",
+                    parse_mode="Markdown"
+                )
+                
+                # Clear context
+                clear_conversation_context(user.id)
+                logger.info(f"User {user.id} created task {task.id} via natural language: {task.title}")
+            except Exception as task_error:
+                logger.error(f"Error creating task: {task_error}", exc_info=True)
+                await query.answer("❌ Error creating task")
+                await query.message.edit_text(
+                    f"⚠️ **Error creating task**\n\n"
+                    f"I encountered an error: {str(task_error)[:200]}\n\n"
+                    "Please try again or use /tasks to create a task manually.",
+                    parse_mode="Markdown"
+                )
             
         elif callback_data == "nl_task_cancel":
             await query.answer("❌ Cancelled")

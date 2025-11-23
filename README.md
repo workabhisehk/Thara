@@ -136,6 +136,11 @@ Comprehensive documentation is available in the `docs/` folder:
 - **[DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Complete deployment guide for all platforms
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
 - **[IMPROVEMENTS.md](docs/IMPROVEMENTS.md)** - Future enhancements and improvements
+- **[CODERABBIT_SETUP.md](docs/CODERABBIT_SETUP.md)** - CodeRabbit AI code review setup guide
+
+## Code Review
+
+This repository uses [CodeRabbit](https://github.com/apps/coderabbitai) for automated AI-powered code reviews on pull requests. The configuration is located in `.coderabbit.yaml`. See [CODERABBIT_SETUP.md](docs/CODERABBIT_SETUP.md) for installation and setup instructions.
 
 ## License
 

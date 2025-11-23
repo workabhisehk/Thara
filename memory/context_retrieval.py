@@ -104,8 +104,10 @@ async def get_context_for_ai(
                 "work_start_hour": user.work_start_hour,
                 "work_end_hour": user.work_end_hour,
                 "timezone": user.timezone,
-                "check_in_interval": user.check_in_interval
+                "check_in_interval": user.check_in_interval,
+                "preferred_name": user.preferred_name or user.first_name
             }
+            context["user_name"] = user.preferred_name or user.first_name
     except Exception as e:
         logger.error(f"Error retrieving user preferences: {e}")
     

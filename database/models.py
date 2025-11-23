@@ -44,6 +44,7 @@ class User(Base):
     username = Column(String, nullable=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
+    preferred_name = Column(String, nullable=True)  # User's preferred name for the agent to use
     
     # Work hours configuration
     work_start_hour = Column(Integer, default=8)
@@ -56,6 +57,10 @@ class User(Base):
     check_in_interval = Column(Integer, default=30)  # minutes
     is_active = Column(Boolean, default=True)
     is_onboarded = Column(Boolean, default=False)
+    
+    # Conversation state (database-backed for persistence)
+    conversation_state = Column(String, default="idle", nullable=True)  # Stores ConversationState enum value
+    conversation_context = Column(JSON, nullable=True)  # Stores ConversationContext.data as JSON
     
     # Google Calendar
     google_calendar_connected = Column(Boolean, default=False)
@@ -152,7 +157,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # References users.id (internal ID), not telegram_id
     
     message_id = Column(Integer, nullable=False)  # Telegram message ID
     text = Column(Text, nullable=False)

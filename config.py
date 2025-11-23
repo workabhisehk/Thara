@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     host: str = Field("0.0.0.0", env="HOST")
     port: int = Field(8000, env="PORT")
     
+    # Agent Framework Selection
+    use_parlant: bool = Field(False, env="USE_PARLANT")  # Set to True to use Parlant instead of LangGraph
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

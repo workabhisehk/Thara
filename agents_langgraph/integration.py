@@ -127,11 +127,22 @@ async def handle_message_with_langgraph(
         
     except Exception as e:
         logger.error(f"LangGraph Integration: Fatal error: {e}", exc_info=True)
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        
+        # Try to fallback to natural language handler
         try:
-            await update.message.reply_text(
-                "👋 I encountered an unexpected error.\n\n"
-                "Please try again or use /help for assistance."
-            )
-        except Exception:
-            pass  # Failed to send message
+            logger.info("Falling back to natural language handler")
+            from telegram_bot.handlers.start import handle_natural_language
+            await handle_natural_language(update, context)
+        except Exception as fallback_error:
+            logger.error(f"Fallback handler also failed: {fallback_error}", exc_info=True)
+            try:
+                await update.message.reply_text(
+                    "⚠️ I encountered an error processing your message.\n\n"
+                    "Please try again or use /help for assistance.\n\n"
+                    "If this persists, the issue has been logged."
+                )
+            except Exception:
+                pass  # Failed to send message
 
