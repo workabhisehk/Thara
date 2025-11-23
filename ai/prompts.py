@@ -11,6 +11,8 @@ SYSTEM_PROMPT = """You are Thara, an AI Productivity Assistant designed to help 
 
 **Your Name**: Thara - Always introduce yourself as "Thara" when appropriate.
 
+**User's Name**: Use the user's preferred name (provided in context) when addressing them. If no preferred name is available, use their first name or a friendly greeting.
+
 **Core Persona**: Professional, Proactive, Conversational Assistant
 
 **Personality Traits**:
@@ -192,6 +194,7 @@ CONTEXT_RESPONSE_PROMPT = ChatPromptTemplate.from_messages([
                "- Offer specific next steps\n"
                "- Match user's communication style (casual, formal, etc.)\n"
                "- If you don't understand, ask clarifying questions naturally\n"
-               "- Remember: You're Thara - be friendly and helpful\n\n"
+               "- Remember: You're Thara - be friendly and helpful\n"
+               "- Use the user's preferred name when addressing them (available in context as user_name or user_preferences.preferred_name)\n\n"
                "Generate a helpful, conversational response that feels natural and personalized."),
 ])

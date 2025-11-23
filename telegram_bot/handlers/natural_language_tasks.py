@@ -227,31 +227,116 @@ async def handle_nl_task_callbacks(
                 )
                 return
             
-            # Create task
-            task = await create_task(
+            # Check for duplicates before creating
+            from tasks.duplicate_detection import check_for_duplicates
+            duplicate_info = await check_for_duplicates(
                 session,
                 db_user.id,
-                title=task_title,
-                description=description,
-                pillar=pillar,
-                priority=priority,
-                due_date=due_date,
-                estimated_duration=duration
+                task_title,
+                due_date,
+                similarity_threshold=0.85
             )
             
-            await session.commit()
+            # If duplicate found, ask user to confirm
+            if duplicate_info and duplicate_info.get("is_duplicate"):
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+                
+                keyboard = [
+                    [
+                        InlineKeyboardButton("✅ Create Anyway", callback_data="nl_task_confirm_duplicate"),
+                        InlineKeyboardButton("❌ Cancel", callback_data="nl_task_cancel"),
+                    ]
+                ]
+                
+                await query.message.edit_text(
+                    duplicate_info.get("message", "Similar task found."),
+                    parse_mode="Markdown",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                
+                # Store duplicate info in context for later
+                conv_context.data["duplicate_info"] = duplicate_info
+                return
             
-            await query.answer("✅ Task created!")
-            await query.message.edit_text(
-                f"✅ **Task created!**\n\n"
-                f"**{task.title}**\n\n"
-                "I'll remind you before the deadline.",
-                parse_mode="Markdown"
-            )
+            # Create task
+            try:
+                task = await create_task(
+                    session,
+                    db_user.id,
+                    title=task_title,
+                    description=description,
+                    pillar=pillar,
+                    priority=priority,
+                    due_date=due_date,
+                    estimated_duration=duration
+                )
+                
+                await session.commit()
+                
+                await query.answer("✅ Task created!")
+                await query.message.edit_text(
+                    f"✅ **Task created!**\n\n"
+                    f"**{task.title}**\n\n"
+                    "I'll remind you before the deadline.",
+                    parse_mode="Markdown"
+                )
+                
+                # Clear context
+                clear_conversation_context(user.id)
+                logger.info(f"User {user.id} created task {task.id} via natural language: {task.title}")
+            except Exception as task_error:
+                logger.error(f"Error creating task: {task_error}", exc_info=True)
+                await query.answer("❌ Error creating task")
+                await query.message.edit_text(
+                    f"⚠️ **Error creating task**\n\n"
+                    f"I encountered an error: {str(task_error)[:200]}\n\n"
+                    "Please try again or use /tasks to create a task manually.",
+                    parse_mode="Markdown"
+                )
             
-            # Clear context
-            clear_conversation_context(user.id)
-            logger.info(f"User {user.id} created task {task.id} via natural language: {task.title}")
+        elif callback_data == "nl_task_confirm_duplicate":
+            # User confirmed they want to create despite duplicate
+            task_title = conv_context.data.get("task_title", "")
+            pillar = conv_context.data.get("task_pillar", "other")
+            priority = conv_context.data.get("task_priority", "medium")
+            due_date = conv_context.data.get("task_due_date")
+            duration = conv_context.data.get("task_duration")
+            description = conv_context.data.get("task_description")
+            
+            try:
+                task = await create_task(
+                    session,
+                    db_user.id,
+                    title=task_title,
+                    description=description,
+                    pillar=pillar,
+                    priority=priority,
+                    due_date=due_date,
+                    estimated_duration=duration
+                )
+                
+                await session.commit()
+                
+                await query.answer("✅ Task created!")
+                await query.message.edit_text(
+                    f"✅ **Task created!**\n\n"
+                    f"**{task.title}**\n\n"
+                    "I'll remind you before the deadline.",
+                    parse_mode="Markdown"
+                )
+                
+                # Clear context
+                clear_conversation_context(user.id)
+                logger.info(f"User {user.id} created task {task.id} despite duplicate warning: {task.title}")
+            except Exception as task_error:
+                logger.error(f"Error creating task: {task_error}", exc_info=True)
+                await query.answer("❌ Error creating task")
+                await query.message.edit_text(
+                    f"⚠️ **Error creating task**\n\n"
+                    f"I encountered an error: {str(task_error)[:200]}\n\n"
+                    "Please try again or use /tasks to create a task manually.",
+                    parse_mode="Markdown"
+                )
             
         elif callback_data == "nl_task_cancel":
             await query.answer("❌ Cancelled")

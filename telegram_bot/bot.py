@@ -71,14 +71,36 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         error_context["details"] = str(error) if str(error) else "Invalid input format"
     elif isinstance(error, ConnectionError):
         error_category = "database_error"
+        # Check if it's a database connection error specifically
+        error_str = str(error).lower()
+        if "database" in error_str or "connection" in error_str or "postgres" in error_str:
+            error_category = "database_error"
+            # Try to check database health (async)
+            try:
+                from database.connection import check_connection_health
+                is_healthy = await check_connection_health()
+                if not is_healthy:
+                    logger.error("Database health check failed - connection is down")
+                    error_context["details"] = "Database connection is currently unavailable"
+            except Exception as health_check_error:
+                logger.warning(f"Could not check database health: {health_check_error}")
     elif isinstance(error, TimeoutError):
         error_category = "validation_error"
         error_context["details"] = "The operation took too long"
     elif isinstance(error, KeyError):
         error_category = "validation_error"
         error_context["details"] = "Missing required information"
-    elif "database" in str(error).lower() or "sql" in str(error).lower():
+    elif "database" in str(error).lower() or "sql" in str(error).lower() or "asyncpg" in str(error).lower():
         error_category = "database_error"
+    # Check for schema/column errors specifically
+    elif hasattr(error, '__class__') and 'ProgrammingError' in error.__class__.__name__:
+        error_str = str(error).lower()
+        if "column" in error_str and "does not exist" in error_str:
+            error_category = "database_error"
+            error_context["details"] = "Database schema mismatch. Please restart the bot or run migrations."
+            logger.error("⚠️ Database schema mismatch detected! This usually means:")
+            logger.error("   1. Migrations need to be run: alembic upgrade head")
+            logger.error("   2. Or the bot needs to be restarted to clear connection cache")
     elif "llm" in str(error).lower() or "openai" in str(error).lower() or "gemini" in str(error).lower():
         error_category = "llm_error"
     elif "calendar" in str(error).lower():

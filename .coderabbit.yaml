@@ -1,0 +1,158 @@
+# CodeRabbit Configuration
+# This file configures CodeRabbit AI code review settings
+
+# General settings
+language: en
+
+# Review settings
+reviews:
+  # Enable/disable reviews for pull requests
+  enabled: true
+  
+  # Review mode: "auto" (automatic), "request" (on-demand), or "disabled"
+  mode: auto
+  
+  # Review status: "auto" (auto-approve if no issues), "manual" (always manual review)
+  status: auto
+  
+  # Base branch to review against
+  base_branches:
+    - main
+    - master
+    - develop
+  
+  # Number of reviewers (0 means automatic assignment)
+  reviewers: 0
+  
+  # Review categories to focus on
+  review_categories:
+    - security
+    - performance
+    - bug_risk
+    - documentation
+    - best_practices
+    - style
+    - clarity
+    - maintainability
+    - test_coverage
+  
+  # File patterns to include/exclude from reviews
+  path_filters:
+    include:
+      - "**/*.py"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.json"
+      - "**/*.yaml"
+      - "**/*.yml"
+    exclude:
+      - "**/*.min.js"
+      - "**/*.pyc"
+      - "**/__pycache__/**"
+      - "**/venv/**"
+      - "**/node_modules/**"
+      - "**/*.log"
+      - "**/.git/**"
+      - "**/migrations/versions/*.py"  # Exclude auto-generated migrations
+
+# Chat settings (for AI assistant in PRs)
+chat:
+  enabled: true
+
+# Code suggestions
+suggestions:
+  enabled: true
+  
+  # Auto-apply suggestions
+  auto_apply: false
+  
+  # Types of suggestions to provide
+  types:
+    - code_quality
+    - security
+    - performance
+    - documentation
+    - refactoring
+
+# Commit message analysis
+commit_message:
+  enabled: true
+  suggestions: true
+
+# PR description generation
+pr_description:
+  enabled: true
+  mode: auto  # "auto" or "request"
+
+# Custom instructions for CodeRabbit
+instructions: |
+  - Focus on Python best practices and PEP 8 compliance
+  - Pay special attention to async/await patterns and error handling
+  - Review database queries for SQL injection risks
+  - Check for proper logging and error messages
+  - Verify type hints are used where appropriate
+  - Ensure environment variables are handled securely
+  - Review Telegram bot handlers for proper user input validation
+  - Check that database migrations follow Alembic best practices
+  - Verify that API keys and secrets are never committed
+  - Review memory and context retrieval code for efficiency
+
+# Ignore patterns (files/paths to skip entirely)
+ignore:
+  - "**/parlant-data/**"
+  - "**/parlant-data/**"
+  - "**/venv/**"
+  - "**/.git/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "**/*.log"
+  - "**/node_modules/**"
+
+# Language-specific settings
+language_settings:
+  python:
+    # Python-specific rules
+    line_length: 88  # Black formatter default
+    docstring_style: google  # Google style docstrings
+    type_checking: true
+    test_coverage_threshold: 80
+
+# Workflow settings
+workflows:
+  # Create summaries for PRs
+  summarize:
+    enabled: true
+  
+  # Analyze code changes
+  analyze:
+    enabled: true
+  
+  # Check for security vulnerabilities
+  security:
+    enabled: true
+  
+  # Check test coverage
+  test_coverage:
+    enabled: true
+    threshold: 80
+
+# Notification settings
+notifications:
+  # Notify on review completion
+  on_review: true
+  
+  # Notify on critical issues found
+  on_critical_issues: true
+
+# Cost optimization (for API usage)
+cost_optimization:
+  # Skip reviews on draft PRs
+  skip_draft: false
+  
+  # Maximum files to review per PR (0 = no limit)
+  max_files: 0
+  
+  # Maximum diff size to review (0 = no limit)
+  max_diff_size: 0
+

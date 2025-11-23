@@ -86,6 +86,26 @@ async def create_task(
         if estimated_duration > 1440:  # 24 hours
             raise ValueError("Estimated duration cannot exceed 24 hours (1440 minutes).")
     
+    # Check for duplicates (but don't block - let caller decide)
+    from tasks.duplicate_detection import check_for_duplicates
+    duplicate_info = await check_for_duplicates(
+        session,
+        user_id,
+        title,
+        due_date,
+        similarity_threshold=0.85
+    )
+    
+    # Store duplicate info in task metadata for later use
+    task_metadata = {}
+    if duplicate_info and duplicate_info.get("is_duplicate"):
+        task_metadata["duplicate_check"] = {
+            "has_duplicates": True,
+            "similar_count": len(duplicate_info.get("similar_tasks", [])),
+            "highest_similarity": duplicate_info.get("highest_similarity", 0.0)
+        }
+        logger.info(f"Duplicate detected for task '{title}': {duplicate_info.get('highest_similarity', 0.0):.0%} similarity")
+    
     task = Task(
         user_id=user_id,
         title=title,
@@ -94,7 +114,8 @@ async def create_task(
         priority=priority_enum,
         due_date=due_date,
         estimated_duration=estimated_duration,
-        status=TaskStatus.PENDING
+        status=TaskStatus.PENDING,
+        task_metadata=task_metadata if task_metadata else None
     )
     
     session.add(task)

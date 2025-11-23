@@ -129,6 +129,7 @@ def update_state_from_context(
     # Map legacy state to active agent
     state_mapping = {
         ConversationState.ONBOARDING: "onboarding_agent",
+        ConversationState.ONBOARDING_NAME: "onboarding_agent",
         ConversationState.ONBOARDING_PILLARS: "onboarding_agent",
         ConversationState.ONBOARDING_CUSTOM_PILLAR: "onboarding_agent",
         ConversationState.ONBOARDING_WORK_HOURS: "onboarding_agent",
